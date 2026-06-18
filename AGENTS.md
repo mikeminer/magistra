@@ -71,7 +71,8 @@ Se serve un nuovo `type`, proponilo in una issue prima di usarlo, così il vocab
 - Dopo il frontmatter, inizia con un titolo `# ` di primo livello che ripete il `title`.
 - **Un solo `#`** per file; usa `##`/`###` per le sottosezioni.
 - Stile **bozza/descrittivo**: lo stato attuale del progetto è concettuale, non un'implementazione. Se descrivi qualcosa di non ancora implementato, dichiaralo (es. "bozza concettuale").
-- Tabelle per schemi di campi ed elenchi di formati; blocchi di codice recintati per strutture XML, pattern URI e diagrammi ASCII.
+- Tabelle per schemi di campi ed elenchi di formati; blocchi di codice recintati per markup (XML) e pattern (URI).
+- **Diagrammi in [Mermaid](https://mermaid.js.org/)** (blocco ```` ```mermaid ````), non ASCII art: sono renderizzabili da GitHub e vengono inclusi come immagini nel PDF (`npm run build:pdf`). Mantieni le etichette brevi (usa `<br/>` per andare a capo).
 
 ---
 

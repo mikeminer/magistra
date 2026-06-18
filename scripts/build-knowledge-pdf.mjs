@@ -14,6 +14,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
 import { marked } from 'marked';
@@ -33,6 +35,38 @@ const bundleRoot = argVal('--root')
 const outPath = argVal('--out')
   ? path.resolve(argVal('--out'))
   : path.join(repoRoot, 'dist', 'knowledge-base.pdf');
+
+// --- Rendering Mermaid -> PNG (mermaid-cli, offline) ------------------------
+
+const MMDC = path.join(
+  repoRoot, 'node_modules', '.bin',
+  process.platform === 'win32' ? 'mmdc.cmd' : 'mmdc',
+);
+const mermaidCacheDir = path.join(path.dirname(outPath), '.mermaid');
+let ppConfigPath = null;
+let mermaidCount = 0;
+
+// Renderizza un blocco Mermaid in PNG (cache per hash del contenuto).
+function renderMermaid(code) {
+  fs.mkdirSync(mermaidCacheDir, { recursive: true });
+  if (!ppConfigPath) {
+    // --no-sandbox: necessario in molti ambienti CI/Linux e innocuo in locale.
+    ppConfigPath = path.join(mermaidCacheDir, 'puppeteer.json');
+    fs.writeFileSync(ppConfigPath, JSON.stringify({ args: ['--no-sandbox'] }));
+  }
+  const hash = crypto.createHash('sha1').update(code).digest('hex').slice(0, 16);
+  const png = path.join(mermaidCacheDir, `${hash}.png`);
+  if (!fs.existsSync(png)) {
+    const mmd = path.join(mermaidCacheDir, `${hash}.mmd`);
+    fs.writeFileSync(mmd, code);
+    execFileSync(
+      MMDC,
+      ['-i', mmd, '-o', png, '-b', 'white', '-s', '3', '-p', ppConfigPath],
+      { stdio: ['ignore', 'ignore', 'pipe'] },
+    );
+  }
+  return png;
+}
 
 // --- Costanti di stile ------------------------------------------------------
 
@@ -304,7 +338,32 @@ function build() {
     doc.fillColor(COLORS.text);
   }
 
+  function mermaidBlock(t) {
+    const png = renderMermaid(t.text); // NB: niente sanitize, Mermaid usa font reali
+    const img = doc.openImage(png);
+    let w = Math.min(contentW, img.width); // riduci per stare in pagina, non ingrandire
+    let h = img.height * (w / img.width);
+    const maxH = doc.page.height - M.top - 64;
+    if (h > maxH) { const f = maxH / h; w *= f; h *= f; }
+    if (doc.y + h > bottomY()) doc.addPage();
+    doc.moveDown(0.2);
+    doc.image(png, left + (contentW - w) / 2, doc.y, { width: w });
+    doc.y += h;
+    doc.moveDown(0.6);
+    mermaidCount++;
+  }
+
   function codeBlock(t) {
+    if ((t.lang || '').toLowerCase() === 'mermaid') {
+      try {
+        mermaidBlock(t);
+        return;
+      } catch (err) {
+        const msg = (err && err.message ? err.message : String(err)).split('\n')[0];
+        console.warn(`⚠ Render Mermaid fallito, mostro il codice sorgente. ${msg}`);
+        // prosegue mostrando il blocco come codice
+      }
+    }
     const raw = sanitize(t.text.replace(/\n+$/, ''));
     const lines = raw.split('\n');
     const pad = 8;
@@ -526,7 +585,10 @@ function build() {
 build()
   .then(() => {
     const kb = (fs.statSync(outPath).size / 1024).toFixed(0);
-    console.log(`✓ PDF generato: ${path.relative(repoRoot, outPath)} (${kb} KB)`);
+    console.log(
+      `✓ PDF generato: ${path.relative(repoRoot, outPath)} (${kb} KB)` +
+      `${mermaidCount ? ` · ${mermaidCount} diagrammi Mermaid` : ''}`,
+    );
   })
   .catch((e) => {
     console.error('✗ Errore nella generazione del PDF:', e);

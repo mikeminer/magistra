@@ -12,6 +12,7 @@
     "build:pdf": "node scripts/build-knowledge-pdf.mjs"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
     "marked": "^18.0.5",
     "pdfkit": "^0.19.1"
   }

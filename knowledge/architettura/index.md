@@ -12,29 +12,25 @@ Bozza di architettura per Italian-OSS-Legal-Platform. In questa fase serve a ori
 
 ## Vista d'insieme
 
-```
-                 ┌─────────────────────────┐
-   Utente ─────► │   Frontend (Next.js)     │
-                 └───────────┬──────────────┘
-                             │ API
-                 ┌───────────▼──────────────┐
-                 │   Backend / API (Node)    │
-                 │  - orchestrazione RAG     │
-                 │  - autenticazione         │
-                 └───┬───────────────┬───────┘
-                     │               │
-        ┌────────────▼───┐     ┌─────▼────────────┐
-        │ Vector DB       │     │ Object storage   │
-        │ (PostgreSQL +   │     │ (MinIO, S3-comp.)│
-        │  pgvector)      │     │ documenti utente │
-        └────────────┬────┘     └──────────────────┘
-                     │
-        ┌────────────▼─────────────┐
-        │ Indice normativo          │  ◄── pipeline di ingest
-        │ (chunk + metadati ELI)    │      (vedi /modello-dati/pipeline-trasformazione.md)
-        └───────────────────────────┘
+```mermaid
+flowchart TD
+    Utente(["Utente"])
+    FE["Frontend (Next.js)"]
+    BE["Backend / API (Node)<br/>orchestrazione RAG · autenticazione"]
+    VDB[("Vector DB<br/>PostgreSQL + pgvector")]
+    OS[("Object storage<br/>MinIO, S3-compat.<br/>documenti utente")]
+    IDX["Indice normativo<br/>chunk + metadati ELI"]
+    Pipe[/"Pipeline di ingest"/]
+    LLM["LLM<br/>provider configurabile"]
 
-   LLM (provider configurabile) ──► generazione risposte con citazioni
+    Utente --> FE
+    FE -->|API| BE
+    BE --> VDB
+    BE --> OS
+    VDB --> IDX
+    Pipe -. alimenta .-> IDX
+    BE --> LLM
+    LLM -->|risposte con citazioni| FE
 ```
 
 ## Concetti
