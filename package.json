@@ -8,6 +8,11 @@
   "scripts": {
     "test": "node scripts/validate-knowledge-base.mjs",
     "test:strict": "node scripts/validate-knowledge-base.mjs --strict",
-    "validate:kb": "node scripts/validate-knowledge-base.mjs"
+    "validate:kb": "node scripts/validate-knowledge-base.mjs",
+    "build:pdf": "node scripts/build-knowledge-pdf.mjs"
+  },
+  "devDependencies": {
+    "marked": "^18.0.5",
+    "pdfkit": "^0.19.1"
   }
 }

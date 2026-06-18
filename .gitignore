@@ -1,0 +1,9 @@
+# Dipendenze
+node_modules/
+
+# Artefatti di build (PDF generato dalla knowledge base)
+dist/
+
+# Log e file di sistema
+npm-debug.log*
+.DS_Store
