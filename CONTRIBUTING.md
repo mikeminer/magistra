@@ -1,0 +1,43 @@
+# Contribuire a Italian-OSS-Legal-Platform
+
+Grazie per l'interesse verso **Italian-OSS-Legal-Platform**! Il progetto è agli inizi e ogni contributo è prezioso: dati, parsing, valutazione qualità, documentazione e (più avanti) codice.
+
+## Come puoi aiutare
+
+In questa fase il focus è la **knowledge base** e la pipeline dei dati. Aree dove serve aiuto:
+
+- **Fonti dati**: mappare e documentare fonti normative italiane aperte (vedi [`docs/fonti-dati.md`](docs/fonti-dati.md)).
+- **Parsing Akoma Ntoso / NIR**: definire e validare lo schema di estrazione (vedi [`docs/modello-dati.md`](docs/modello-dati.md)).
+- **Qualità delle risposte**: proporre set di domande di test e criteri di valutazione delle citazioni.
+- **Documentazione**: migliorare, correggere e tradurre i documenti in `docs/`.
+- **Glossario**: arricchire il [`docs/glossario.md`](docs/glossario.md) con termini giuridici e tecnici.
+
+## Flusso di lavoro
+
+1. **Apri una issue** prima di lavori non banali, così da discutere l'approccio ed evitare duplicazioni.
+2. Usa etichette chiare: `dati`, `documentazione`, `parsing`, `domanda`, `bug`.
+3. Per modifiche: **fork → branch → pull request** con descrizione di *cosa* e *perché*.
+4. Mantieni le PR piccole e focalizzate su un solo tema.
+
+## Convenzioni
+
+- **Lingua**: documentazione e contenuti in **italiano**. Commenti tecnici in italiano.
+- **Commit**: messaggi brevi e descrittivi. Consigliato il formato [Conventional Commits](https://www.conventionalcommits.org/) (es. `docs: aggiungi schema ELI`).
+- **Markdown**: una frase per riga quando possibile, per *diff* più leggibili.
+
+## Principi non negoziabili
+
+Ogni contributo deve rispettare i principi del progetto:
+
+- **Citazioni verificabili**: nessuna affermazione normativa senza riferimento alla fonte ufficiale.
+- **Rispetto delle licenze**: i dati si usano e si ridistribuiscono solo nei termini consentiti (vedi [`docs/fonti-dati.md`](docs/fonti-dati.md)).
+- **Niente consulenza legale**: Italian-OSS-Legal-Platform è uno strumento informativo, non sostituisce un professionista.
+- **Privacy**: non inserire dati personali o documenti riservati nei test o nel repository.
+
+## Codice di condotta
+
+Mantieni un comportamento rispettoso e collaborativo. Comportamenti tossici o discriminatori non sono tollerati. (Un `CODE_OF_CONDUCT.md` formale sarà aggiunto.)
+
+## Domande
+
+Per dubbi apri una issue con etichetta `domanda`. Grazie per contribuire a rendere il diritto italiano più accessibile!
