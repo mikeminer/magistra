@@ -1,0 +1,6 @@
+# Code owners for Italian-OSS-Legal-Platform
+# Every PR touching matching paths requires review from the listed owners.
+# Docs: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repo
+*       @Italian-Builders-Org/legal-maintainers

@@ -1,0 +1,28 @@
+name: CI
+
+# Runs on PRs into main/dev and on pushes to those branches (post-merge).
+# This is a placeholder pipeline: replace the steps in the `ci` job with real
+# lint / typecheck / test / build commands once the project stack lands.
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Placeholder check
+        run: |
+          echo "No build/test steps configured yet."
+          echo "Replace this with real CI (install, lint, test, build) when the stack is in place."
