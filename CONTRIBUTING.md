@@ -2,6 +2,8 @@
 
 Grazie per l'interesse verso **Italian-OSS-Legal-Platform**! Il progetto è agli inizi e ogni contributo è prezioso: dati, parsing, valutazione qualità, documentazione e (più avanti) codice.
 
+Il progetto è ideato, gestito e costruito dalla community **[Italian Builders](https://italianbuilders.co)** ([@italianbldrs](https://x.com/italianbldrs)): unisciti a noi.
+
 ## Come puoi aiutare
 
 In questa fase il focus è la **knowledge base** e la pipeline dei dati. La knowledge base è un bundle **[Open Knowledge Format (OKF)](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)** in [`knowledge/`](knowledge/): un concetto per file Markdown, con frontmatter YAML (`type` obbligatorio; `title`, `description`, `resource`, `tags`, `timestamp` opzionali) e `index.md` per ogni cartella. Aree dove serve aiuto:
