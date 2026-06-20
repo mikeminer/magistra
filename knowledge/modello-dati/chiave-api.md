@@ -6,7 +6,7 @@ tags: [entita, api-key, cifratura]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
-# Entità `Chiave API`
+# Chiave API
 
 La credenziale con cui la piattaforma interroga un [provider LLM](/architettura/provider-llm.md) per conto dell'utente. Gestita dal componente [gestione delle API key](/architettura/gestione-api-key.md).
 

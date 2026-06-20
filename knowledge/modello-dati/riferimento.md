@@ -6,7 +6,7 @@ tags: [entita, riferimento, grafo]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
-# Entità `Riferimento` (cross-reference)
+# Riferimento (cross-reference)
 
 Collegamento tra norme o unità, base del grafo delle norme.
 

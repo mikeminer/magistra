@@ -6,7 +6,7 @@ tags: [entita, articolo, comma]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
-# Entità `Unita` (articolo/comma)
+# Unità (articolo / comma)
 
 Unità strutturale del testo normativo, derivata dalla [struttura del documento AKN](/modello-dati/struttura-akn.md).
 

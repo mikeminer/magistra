@@ -6,7 +6,7 @@ tags: [entita, documento, modello-app]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
-# Entità `Documento`
+# Documento
 
 Un file **dell'utente** (contratto, atto, parere) caricato o generato dentro un [Progetto](/modello-dati/progetto.md). Da non confondere con la [Norma](/modello-dati/norma.md), che appartiene al corpus pubblico.
 
@@ -17,7 +17,7 @@ Un file **dell'utente** (contratto, atto, parere) caricato o generato dentro un 
 | `nome` | nome del file |
 | `formato` | PDF, DOCX, … |
 | `uri_storage` | posizione nell'[object storage](/architettura/object-storage.md) |
-| `versioni` | cronologia delle [modifiche tracciate](/glossario/tracked-changes.md) |
+| `versioni` | cronologia delle [modifiche tracciate](/glossario/modifiche-tracciate.md) |
 | `caricato_il` | data di acquisizione |
 
 ## Relazioni e trattamento

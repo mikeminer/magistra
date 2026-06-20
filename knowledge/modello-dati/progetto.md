@@ -6,7 +6,7 @@ tags: [entita, progetto, modello-app]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
-# Entità `Progetto`
+# Progetto
 
 Raggruppa il lavoro attorno a una pratica o a un cliente. È il dato dietro la funzionalità [Progetti](/funzionalita/progetti.md).
 

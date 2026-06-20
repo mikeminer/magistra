@@ -40,6 +40,7 @@ timestamp: 2026-06-18T00:00:00Z
 | `resource` | Se esiste | URL | Link alla risorsa canonica esterna (portale, spec, repo). Una sola URL. |
 | `tags` | Consigliato | Lista | kebab-case, in italiano, da 1 a 5 tag. Usa tag già esistenti quando possibile. |
 | `timestamp` | Consigliato | ISO 8601 UTC | Data dell'ultimo aggiornamento sostanziale, es. `2026-06-18T00:00:00Z`. Aggiornalo quando modifichi il contenuto. |
+| `version` | Solo radice | Stringa (SemVer) | Versione del bundle, **solo in `knowledge/index.md`**. È l'unica fonte di verità della versione: la build PDF (`npm run build:pdf`) la legge per la copertina e il nome del file. Incrementala quando pubblichi una nuova versione del documento. |
 
 Regole:
 - Non inventare campi nuovi nel frontmatter senza prima discuterne in una issue.

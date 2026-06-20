@@ -47,4 +47,4 @@ Termini giuridici e tecnici ricorrenti nel progetto Magistra. Ogni termine è un
 - [Groundedness (aderenza alle fonti)](/glossario/groundedness.md)
 - [Allucinazione](/glossario/allucinazione.md)
 - [Cifratura](/glossario/cifratura.md)
-- [Modifiche tracciate (tracked changes)](/glossario/tracked-changes.md)
+- [Modifiche tracciate (tracked changes)](/glossario/modifiche-tracciate.md)

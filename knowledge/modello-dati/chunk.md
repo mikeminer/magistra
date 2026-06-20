@@ -6,7 +6,7 @@ tags: [entita, chunk, embedding, rag]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
-# Entità `Chunk` (per la ricerca semantica)
+# Chunk (ricerca semantica)
 
 Porzione di testo indicizzata per il retrieval. Vedi [chunk](/glossario/chunk.md) e [ricerca semantica](/glossario/ricerca-semantica.md).
 

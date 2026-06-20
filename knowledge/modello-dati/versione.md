@@ -6,7 +6,7 @@ tags: [entita, expression, vigenza]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
-# Entità `Versione` (Expression)
+# Versione (Expression)
 
 Corrisponde al livello **Expression** del [modello FRBR](/modello-dati/frbr.md): una versione specifica di una [Norma](/modello-dati/norma.md) nel tempo.
 

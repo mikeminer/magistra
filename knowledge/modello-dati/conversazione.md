@@ -6,7 +6,7 @@ tags: [entita, conversazione, modello-app]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
-# Entità `Conversazione`
+# Conversazione
 
 Una sessione di dialogo tra l'utente e l'[assistente](/funzionalita/assistente-legale.md), conservata per poter riprendere il filo e tracciare le fonti usate.
 

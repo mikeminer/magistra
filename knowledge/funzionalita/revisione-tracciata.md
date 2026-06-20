@@ -2,13 +2,13 @@
 type: Concetto
 title: Revisione con modifiche tracciate
 description: Editing puntuale dei documenti con modifiche tracciate (tracked changes) e cronologia delle versioni, accettabili o rifiutabili dall'utente.
-tags: [documenti, tracked-changes, versioning]
+tags: [documenti, modifiche-tracciate, versioning]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
 # Revisione con modifiche tracciate
 
-L'assistente propone modifiche **puntuali** a un [documento](/modello-dati/documento.md) sotto forma di [modifiche tracciate](/glossario/tracked-changes.md): l'utente le rivede e le **accetta o rifiuta** una per una, come in un word processor.
+L'assistente propone modifiche **puntuali** a un [documento](/modello-dati/documento.md) sotto forma di [modifiche tracciate](/glossario/modifiche-tracciate.md): l'utente le rivede e le **accetta o rifiuta** una per una, come in un word processor.
 
 ## Cosa fa
 

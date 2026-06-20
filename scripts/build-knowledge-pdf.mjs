@@ -32,9 +32,24 @@ const repoRoot = path.resolve(here, '..');
 const bundleRoot = argVal('--root')
   ? path.resolve(argVal('--root'))
   : path.join(repoRoot, 'knowledge');
+// Versione del documento: unica fonte di verità nel frontmatter di
+// knowledge/index.md (campo `version`). La build la legge automaticamente,
+// così non va mai scritta a mano nello script. La data è quella di generazione.
+function readKbVersion() {
+  try {
+    const raw = fs.readFileSync(path.join(bundleRoot, 'index.md'), 'utf8').replace(/^﻿/, '');
+    const { data } = splitFrontmatter(raw);
+    return (typeof data.version === 'string' && data.version) || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+const KB_VERSION = readKbVersion();
+const GEN_DATE = new Date().toISOString().slice(0, 10);
+
 const outPath = argVal('--out')
   ? path.resolve(argVal('--out'))
-  : path.join(repoRoot, 'dist', 'knowledge-base.pdf');
+  : path.join(repoRoot, 'dist', `knowledge-base-v${KB_VERSION}-${GEN_DATE}.pdf`);
 
 // --- Rendering Mermaid -> PNG (mermaid-cli, offline) ------------------------
 
@@ -90,6 +105,11 @@ const FONT = {
 };
 const SIZE = { body: 10.5, h1: 18, h2: 14, h3: 12, code: 9, small: 8 };
 const LEADING = 1.35;
+// Dimensione dei diagrammi Mermaid: leggermente rimpiccioliti per stare in
+// pagina insieme al loro titolo. `widthFrac` riduce la larghezza (e quindi,
+// proporzionalmente, l'altezza); `maxHeightFrac` è il tetto d'altezza come
+// frazione dell'area utile di pagina.
+const MERMAID = { widthFrac: 0.68, maxHeightFrac: 0.62 };
 
 // Normalizzazione caratteri non rappresentabili dai font PDF standard (WinAnsi).
 const TRANSLIT = {
@@ -264,7 +284,7 @@ function build() {
     bufferPages: true,
     autoFirstPage: false,
     info: {
-      Title: 'Magistra — Knowledge base',
+      Title: `Magistra — Knowledge base v${KB_VERSION} (${GEN_DATE})`,
       Author: 'Magistra',
       Subject: 'Bundle Open Knowledge Format (OKF)',
     },
@@ -274,9 +294,11 @@ function build() {
   doc.pipe(stream);
 
   const M = doc.page?.margins ?? { top: 60, bottom: 64, left: 60, right: 60 };
-  const left = 60;
+  // `left`/`contentW` sono mutabili: il blockquote li sposta temporaneamente
+  // per indentare il proprio contenuto (e li ripristina dopo).
+  let left = 60;
   doc.addPage();
-  const contentW = doc.page.width - 60 - 60;
+  let contentW = doc.page.width - 60 - 60;
   const bottomY = () => doc.page.height - 64;
 
   const ensure = (h) => { if (doc.y + h > bottomY()) doc.addPage(); };
@@ -323,8 +345,8 @@ function build() {
     let first = true;
     runs.forEach((r, i) => {
       const last = i === runs.length - 1;
-      const f = r.style.code ? FONT.mono : FONT.bold;
-      doc.font(f).fontSize(size).fillColor(COLORS.heading);
+      // I titoli sono sempre in grassetto, mai monospace (anche se contengono `code`).
+      doc.font(FONT.bold).fontSize(size).fillColor(COLORS.heading);
       const o = { continued: !last };
       if (first) { doc.text(r.text, left, doc.y, { ...o, width: contentW }); first = false; }
       else doc.text(r.text, o);
@@ -341,9 +363,10 @@ function build() {
   function mermaidBlock(t) {
     const png = renderMermaid(t.text); // NB: niente sanitize, Mermaid usa font reali
     const img = doc.openImage(png);
-    let w = Math.min(contentW, img.width); // riduci per stare in pagina, non ingrandire
+    // Parti dalla larghezza disponibile (mai ingrandire) e rimpicciolisci un po'.
+    let w = Math.min(contentW, img.width) * MERMAID.widthFrac;
     let h = img.height * (w / img.width);
-    const maxH = doc.page.height - M.top - 64;
+    const maxH = (doc.page.height - M.top - 64) * MERMAID.maxHeightFrac;
     if (h > maxH) { const f = maxH / h; w *= f; h *= f; }
     if (doc.y + h > bottomY()) doc.addPage();
     doc.moveDown(0.2);
@@ -418,15 +441,20 @@ function build() {
   }
 
   function blockquote(t) {
-    const startY = doc.y;
     doc.moveDown(0.1);
-    const innerLeft = left + 14;
-    const save = { left };
-    // Render dei contenuti con margine sinistro aumentato.
-    renderBlocks(t.tokens, innerLeft, contentW - 14);
+    const barX = left + 3;          // posizione della barra (margine originale)
+    const startY = doc.y;
+    const savedLeft = left;
+    const savedContentW = contentW;
+    // Indenta davvero il contenuto spostando il margine usato da tutte le
+    // funzioni di rendering interne; ripristina prima di disegnare la barra.
+    left = savedLeft + 18;
+    contentW = savedContentW - 18;
+    renderBlocks(t.tokens);
+    left = savedLeft;
+    contentW = savedContentW;
     doc.save().strokeColor(COLORS.rule).lineWidth(3)
-      .moveTo(left + 3, startY).lineTo(left + 3, doc.y).stroke().restore();
-    void save;
+      .moveTo(barX, startY).lineTo(barX, doc.y).stroke().restore();
     doc.moveDown(0.3);
   }
 
@@ -513,8 +541,11 @@ function build() {
   doc.font(FONT.body).fontSize(14).fillColor(COLORS.text)
     .text('Knowledge base — bundle Open Knowledge Format (OKF)', { width: contentW });
   doc.moveDown(0.6);
-  doc.fontSize(SIZE.body).fillColor(COLORS.muted).text(
-    `Generato il ${new Date().toISOString().slice(0, 10)} · ${order.length} documenti`,
+  doc.font(FONT.bold).fontSize(13).fillColor(COLORS.text)
+    .text(`Versione ${KB_VERSION}`, { width: contentW });
+  doc.moveDown(0.25);
+  doc.font(FONT.body).fontSize(SIZE.body).fillColor(COLORS.muted).text(
+    `Generato il ${GEN_DATE} · ${order.length} documenti`,
     { width: contentW },
   );
   doc.fillColor(COLORS.text);
@@ -538,13 +569,11 @@ function build() {
   doc.fillColor(COLORS.text);
 
   // ---- Sezioni ----
-  let prevTop = null;
+  // Ogni documento ha un solo H1 (il "titolo principale"): lo facciamo iniziare
+  // sempre su una pagina nuova, così ogni concetto ha la sua pagina dedicata.
   for (const bp of order) {
     const d = byPath.get(bp);
-    const top = bp.split('/').slice(0, 2).join('/'); // es. /glossario
-    const isFolderRoot = bp === '/index.md' || bp.endsWith('/index.md');
-    if (isFolderRoot || top !== prevTop) doc.addPage();
-    prevTop = top;
+    doc.addPage();
 
     let titled = false;
     for (const t of d.tokens) {

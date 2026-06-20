@@ -6,7 +6,7 @@ tags: [entita, work, eli]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
-# Entità `Norma` (Work)
+# Norma (Work)
 
 Astratta dai formati di origine, indipendente dal database scelto. Corrisponde al livello **Work** del [modello FRBR](/modello-dati/frbr.md).
 

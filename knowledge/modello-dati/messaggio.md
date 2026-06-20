@@ -6,7 +6,7 @@ tags: [entita, messaggio, citazioni]
 timestamp: 2026-06-20T00:00:00Z
 ---
 
-# Entità `Messaggio`
+# Messaggio
 
 Un singolo turno di una [Conversazione](/modello-dati/conversazione.md): la domanda dell'utente o la risposta dell'assistente.
 
