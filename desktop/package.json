@@ -1,0 +1,87 @@
+{
+  "name": "magistra-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows desktop installer for Magistra.",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "it.italianbuilders.magistra",
+    "productName": "Magistra",
+    "directories": {
+      "output": "../artifacts/installer"
+    },
+    "files": [
+      "main.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../apps/web",
+        "to": "magistra-runtime/apps/web",
+        "filter": [
+          "**/*",
+          "!.next/cache/**",
+          "!.next/dev/**",
+          "!.next/diagnostics/**",
+          "!tsconfig.tsbuildinfo"
+        ]
+      },
+      {
+        "from": "../packages",
+        "to": "magistra-runtime/packages",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../node_modules",
+        "to": "magistra-runtime/node_modules",
+        "filter": [
+          "**/*",
+          "!@italian-oss-legal-platform/**",
+          "!electron/**",
+          "!electron-builder/**",
+          "!app-builder-bin/**",
+          "!builder-util/**",
+          "!builder-util-runtime/**",
+          "!**/.next/dev/**",
+          "!**/.next/cache/**",
+          "!**/.next/diagnostics/**"
+        ]
+      },
+      {
+        "from": "../certs",
+        "to": "magistra-runtime/certs",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../.env",
+        "to": "magistra-runtime/.env"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "Magistra-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Magistra"
+    }
+  }
+}

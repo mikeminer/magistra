@@ -1,8 +1,10 @@
 # Dipendenze
 node_modules/
+desktop/node_modules/
 
 # Artefatti di build (PDF generato dalla knowledge base)
 dist/
+artifacts/installer/
 
 # Log e file di sistema
 npm-debug.log*
