@@ -54,7 +54,6 @@ const state = {
 };
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0d0f10, 0.0028);
 
 const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 2200);
 camera.position.set(0, 38, 178);
