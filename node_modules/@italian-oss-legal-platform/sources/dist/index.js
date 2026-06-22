@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
 export class FonteConRiusoNonVerificatoError extends Error {
     fonte;
     constructor(fonte) {
@@ -157,7 +159,7 @@ export function assertRiusoConsentito(adapter) {
         throw new FonteConRiusoNonVerificatoError(adapter.fonte);
     }
 }
-export async function scaricaDocumentoAkomaNtoso(adapter, url, fetchImpl = fetch) {
+export async function scaricaDocumentoAkomaNtoso(adapter, url, fetchImpl = fetchConFallbackCaLocale) {
     assertRiusoConsentito(adapter);
     const response = await fetchImpl(url, {
         headers: {
@@ -180,7 +182,7 @@ export async function scaricaDocumentoAkomaNtoso(adapter, url, fetchImpl = fetch
         xml
     };
 }
-export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fetch) {
+export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fetchConFallbackCaLocale) {
     assertRiusoConsentito(adapter);
     const response = await fetchImpl(`${NORMATTIVA_OPENDATA_API_URL}/api/v1/atto/dettaglio-atto-urn`, {
         body: JSON.stringify({ urn }),
@@ -205,6 +207,87 @@ export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fe
 }
 export function creaUrlNormattivaDaUrn(urn) {
     return `${NORMATTIVA_BASE_URL}/uri-res/N2Ls?${urn}`;
+}
+async function fetchConFallbackCaLocale(url, init) {
+    try {
+        return await fetch(url, init);
+    }
+    catch (error) {
+        if (!isErroreCertificatoTls(error)) {
+            throw error;
+        }
+        const ca = leggiCertificatiCaLocali();
+        if (!ca) {
+            throw error;
+        }
+        return await fetchHttpsConCaLocale(url, init, ca);
+    }
+}
+function fetchHttpsConCaLocale(url, init = {}, ca) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        const request = httpsRequest(url, {
+            ca,
+            headers: init.headers,
+            method: init.method ?? "GET"
+        }, (response) => {
+            response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+            response.on("end", () => {
+                const body = Buffer.concat(chunks).toString("utf8");
+                resolve({
+                    headers: {
+                        get(name) {
+                            const value = response.headers[name.toLowerCase()];
+                            return Array.isArray(value) ? value.join(", ") : value ?? null;
+                        }
+                    },
+                    ok: response.statusCode !== undefined &&
+                        response.statusCode >= 200 &&
+                        response.statusCode < 300,
+                    status: response.statusCode ?? 0,
+                    statusText: response.statusMessage ?? "",
+                    async text() {
+                        return body;
+                    }
+                });
+            });
+        });
+        request.on("error", reject);
+        if (init.body) {
+            request.write(init.body);
+        }
+        request.end();
+    });
+}
+function leggiCertificatiCaLocali() {
+    const candidates = [
+        process.env.NODE_EXTRA_CA_CERTS,
+        process.env.MAGISTRA_EXTRA_CA_CERTS,
+        "artifacts/certs/avast-root.pem",
+        "artifacts/certs/local-webmail-shield-root.pem",
+        "certs/local-ca.pem",
+        "/app/certs/local-ca.pem"
+    ];
+    const certs = [];
+    const seen = new Set();
+    for (const candidate of candidates) {
+        if (!candidate || seen.has(candidate) || !existsSync(candidate)) {
+            continue;
+        }
+        seen.add(candidate);
+        certs.push(readFileSync(candidate, "utf8"));
+    }
+    return certs.length > 0 ? certs.join("\n") : undefined;
+}
+function isErroreCertificatoTls(error) {
+    const record = error;
+    const codes = new Set([
+        "DEPTH_ZERO_SELF_SIGNED_CERT",
+        "SELF_SIGNED_CERT_IN_CHAIN",
+        "UNABLE_TO_GET_ISSUER_CERT",
+        "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+    ]);
+    return codes.has(String(record?.code)) || codes.has(String(record?.cause?.code));
 }
 function parseNormattivaOpenDataPayload(raw, urn) {
     const parsed = JSON.parse(raw);

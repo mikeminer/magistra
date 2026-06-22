@@ -8,7 +8,10 @@ import { NormattivaAdapter, scaricaAttoNormattivaOpenData } from "@italian-oss-l
 import { creaDatabaseDaEnv } from "@italian-oss-legal-platform/worker/status";
 export async function rispondiConFonti(domanda, env = process.env) {
     const rispostaDatabase = await rispondiConFontiDatabase(domanda, env);
-    return rispostaDatabase ?? (await rispondiConFontiRag(domanda));
+    return rispostaDatabase ?? (await rispondiConFontiRag(domanda, {
+        embeddingProvider: creaEmbeddingProviderDaEnv(env),
+        generatore: creaGeneratoreRispostaDaEnv(env)
+    }));
 }
 export async function rispondiConFontiDatabase(domanda, env = process.env) {
     if (!env.DATABASE_URL) {
@@ -517,29 +520,16 @@ limit 5`));
         });
         const fontiRecuperate = [...fontiPerId.values()];
         const riferimentiNormativi = deduplicaRiferimentiNormativi(fontiRecuperate.flatMap((fonte) => fonte.riferimentiNormativi ?? []));
-        const esempiUnici = [];
-        const targetVisti = new Set();
-        for (const riferimento of riferimentiNormativi) {
-            const targetKey = `${riferimento.tipo}:${riferimento.aEli}`;
-            if (targetVisti.has(targetKey)) {
-                continue;
-            }
-            targetVisti.add(targetKey);
-            esempiUnici.push(riferimento);
-            if (esempiUnici.length >= 3) {
-                break;
-            }
-        }
-        const esempi = esempiUnici
-            .map((riferimento, index) => {
-            const stato = riferimento.statoRisoluzione === "risolto"
-                ? "già collegato all'archivio"
-                : riferimento.statoRisoluzione === "esterno"
-                    ? `collegato a ${riferimento.targetFonte ?? "fonte esterna"}`
-                    : "da risolvere";
-            return `${riferimento.testoMatch ?? riferimento.label} (${stato}) [F${index + 1}]`;
-        })
-            .join("; ");
+        const generata = await generatore.genera({
+            domanda,
+            fonti: fontiRecuperate.map((fonte) => ({
+                eli: fonte.eli,
+                label: fonte.label,
+                metadati: fonte.metadati,
+                testo: testoFonteConRiferimenti(fonte),
+                urlFonte: normalizzaUrlNormattiva(fonte.urlFonte)
+            }))
+        });
         return {
             avvertenza: "Risposta informativa basata solo sulle fonti mostrate; non è consulenza legale.",
             citazioni: fontiRecuperate.map((fonte) => ({
@@ -552,20 +542,14 @@ limit 5`));
             fontiRecuperate,
             metriche: {
                 coperturaCitazioni: calcolaCoperturaCitazioni(fontiRecuperate),
-                modelloRisposta: generatore.nome,
+                modelloRisposta: generata.modello,
                 providerEmbedding: embeddingProvider.nome,
                 retrieval: "ibrido",
                 richiedeRevisioneUmana: false
             },
             modalita: "rag-locale",
             riferimentiNormativi,
-            risposta: [
-                "Sì. Quando un passaggio normativo contiene un rinvio riconoscibile, Magistra OS lo salva nel grafo dei riferimenti e lo mostra come collegamento consultabile.",
-                "Se la norma richiamata è già nell'archivio, il collegamento apre la fonte indicizzata; se rimanda a normativa europea o a una fonte esterna, conserva fonte e URL quando disponibili.",
-                esempi ? `Esempi presenti nell'indice: ${esempi}.` : undefined
-            ]
-                .filter(Boolean)
-                .join(" "),
+            risposta: generata.testo,
             stato: "citata"
         };
     }
@@ -575,6 +559,19 @@ limit 5`));
         }
         throw error;
     }
+}
+function testoFonteConRiferimenti(fonte) {
+    const riferimenti = (fonte.riferimentiNormativi ?? [])
+        .map((riferimento) => {
+        const stato = riferimento.statoRisoluzione === "risolto"
+            ? "risolto nell'archivio"
+            : riferimento.statoRisoluzione === "esterno"
+                ? `esterno${riferimento.targetFonte ? `: ${riferimento.targetFonte}` : ""}`
+                : "pendente";
+        return `${riferimento.testoMatch ?? riferimento.label} (${stato})`;
+    })
+        .join("; ");
+    return riferimenti ? `${fonte.testo}\n\nRiferimenti normativi collegati: ${riferimenti}.` : fonte.testo;
 }
 function formattaRiferimentoNormativo(row, fonteKeys) {
     const daEli = String(row.da_eli);
@@ -737,12 +734,15 @@ async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
     const urns = pianificaUrnNormattivaPerRecupero(domanda);
     if (urns.length === 0) {
         return {
-            stato: "non-applicabile"
+            errore: "Nessuna fonte online Normattiva pianificabile dalla domanda. Indicare atto, numero, anno, articolo o un URL/URN Normattiva.",
+            stato: "fallito",
+            urns
         };
     }
     try {
         const result = await importaUrnNormattivaNelDatabase(urns, database, env);
         return {
+            chunkNormativi: result.chunkNormativi,
             jobId: result.jobId,
             stato: result.chunkNormativi > 0 ? "riuscito" : "fallito",
             urns
@@ -792,23 +792,158 @@ async function importaUrnNormattivaNelDatabase(urns, database, env) {
 export function pianificaUrnNormattivaPerRecupero(domanda) {
     const normalized = normalizza(domanda).replace(/\s+/g, " ").trim();
     const riferimento = estraiRiferimentoDomanda(domanda);
-    const tipoAtto = tipoAttoNormattivaPerUrn(riferimento.tipoAtto, normalized);
-    if (!tipoAtto || !riferimento.numeroAtto || !riferimento.annoAtto) {
-        return [];
-    }
+    return deduplicaUrnNormattiva([
+        ...estraiUrnNormattivaDaTesto(domanda),
+        ...pianificaUrnNormattivaDaRiferimento(riferimento, normalized),
+        ...pianificaUrnNormattivaDaTema(normalized)
+    ]);
+}
+function pianificaUrnNormattivaDaRiferimento(riferimento, normalized) {
     if (riferimento.fonte && riferimento.fonte !== "Normattiva") {
         return [];
     }
     if (riferimento.tipoAtto === "trattato-ue") {
         return [];
     }
-    const dataAtto = estraiDataAttoDaDomanda(normalized, riferimento.annoAtto);
-    const articolo = riferimento.articolo
-        ? `~art${riferimento.articolo.replace(/[^0-9a-z-]/gi, "")}`
-        : "";
+    const attoConosciuto = attoNormattivaConosciuto(riferimento, normalized);
+    const tipoAtto = attoConosciuto?.tipoAttoUrn ??
+        tipoAttoNormattivaPerUrn(riferimento.tipoAtto, normalized);
+    const numeroAtto = attoConosciuto?.numeroAtto ?? riferimento.numeroAtto;
+    const annoAtto = attoConosciuto?.annoAtto ?? riferimento.annoAtto;
+    if (!tipoAtto || !numeroAtto || !annoAtto) {
+        return [];
+    }
+    const dataAtto = attoConosciuto?.dataAtto ?? estraiDataAttoDaDomanda(normalized, annoAtto) ?? annoAtto;
     return [
-        `urn:nir:stato:${tipoAtto}:${dataAtto ?? riferimento.annoAtto};${riferimento.numeroAtto}${articolo}`
+        creaUrnNormattiva({
+            articolo: riferimento.articolo,
+            dataAtto,
+            numeroAtto,
+            tipoAttoUrn: tipoAtto
+        })
     ];
+}
+function pianificaUrnNormattivaDaTema(normalized) {
+    const urns = [];
+    if (isDomandaSuDurataLocazione(normalized)) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge4311998, "2"));
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge3921978, "27"));
+        if (normalized.includes("rinnov")) {
+            urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge3921978, "28"));
+        }
+    }
+    if (normalized.includes("motivazione") &&
+        (normalized.includes("provvedimento") ||
+            normalized.includes("procedimento") ||
+            normalized.includes("amministrativ"))) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge2411990, "3"));
+    }
+    if (normalized.includes("princip") &&
+        (normalized.includes("attivita amministrativa") ||
+            normalized.includes("procedimento amministrativo"))) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge2411990, "1"));
+    }
+    if (normalized.includes("accesso civico") || normalized.includes("trasparenza")) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.decreto33_2013, "5"));
+        if (normalized.includes("limit") || normalized.includes("esclusion")) {
+            urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.decreto33_2013, "5-bis"));
+        }
+    }
+    if (normalized.includes("danno ingiusto")) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile, "2043"));
+    }
+    if (normalized.includes("onere della prova") || normalized.includes("onere probatorio")) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile, "2697"));
+    }
+    if (isDomandaSuIgnoranzaLeggePenale(normalized)) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, "5"));
+    }
+    if (isDomandaSuImpugnazioneLicenziamento(normalized)) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge6041966, "6"));
+    }
+    return urns;
+}
+const ATTI_NORMATTIVA_CONOSCIUTI = {
+    codiceCivile: {
+        annoAtto: "1942",
+        dataAtto: "1942-03-16",
+        numeroAtto: "262",
+        tipoAttoUrn: "regio.decreto"
+    },
+    codicePenale: {
+        annoAtto: "1930",
+        dataAtto: "1930-10-19",
+        numeroAtto: "1398",
+        tipoAttoUrn: "regio.decreto"
+    },
+    decreto33_2013: {
+        annoAtto: "2013",
+        dataAtto: "2013-03-14",
+        numeroAtto: "33",
+        tipoAttoUrn: "decreto.legislativo"
+    },
+    legge2411990: {
+        annoAtto: "1990",
+        dataAtto: "1990-08-07",
+        numeroAtto: "241",
+        tipoAttoUrn: "legge"
+    },
+    legge3921978: {
+        annoAtto: "1978",
+        dataAtto: "1978-07-27",
+        numeroAtto: "392",
+        tipoAttoUrn: "legge"
+    },
+    legge4311998: {
+        annoAtto: "1998",
+        dataAtto: "1998-12-09",
+        numeroAtto: "431",
+        tipoAttoUrn: "legge"
+    },
+    legge6041966: {
+        annoAtto: "1966",
+        dataAtto: "1966-07-15",
+        numeroAtto: "604",
+        tipoAttoUrn: "legge"
+    }
+};
+function attoNormattivaConosciuto(riferimento, normalized) {
+    const match = Object.values(ATTI_NORMATTIVA_CONOSCIUTI).find((atto) => atto.numeroAtto === riferimento.numeroAtto && atto.annoAtto === riferimento.annoAtto);
+    if (match) {
+        return match;
+    }
+    if (/\bcodice\s+civile\b/.test(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile;
+    }
+    if (/\bcodice\s+penale\b/.test(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codicePenale;
+    }
+    return undefined;
+}
+function creaUrnNormattiva(atto, articolo = atto.articolo) {
+    const articoloSuffix = articolo
+        ? `~art${articolo.replace(/[^0-9a-z-]/gi, "")}`
+        : "";
+    return `urn:nir:stato:${atto.tipoAttoUrn}:${atto.dataAtto};${atto.numeroAtto}${articoloSuffix}`;
+}
+function estraiUrnNormattivaDaTesto(input) {
+    const urns = [];
+    for (const match of input.matchAll(/urn:nir:stato:[^\s"'<>]+/gi)) {
+        urns.push(pulisciUrnNormattiva(match[0]));
+    }
+    for (const match of input.matchAll(/https?:\/\/www\.normattiva\.it\/uri-res\/N2Ls\?([^\s"'<>]+)/gi)) {
+        const query = decodeURIComponent(match[1]?.split("#", 1)[0] ?? "");
+        if (query.startsWith("urn:nir:stato:")) {
+            urns.push(pulisciUrnNormattiva(query));
+        }
+    }
+    return urns;
+}
+function pulisciUrnNormattiva(value) {
+    return value.replace(/[),.]+$/g, "");
+}
+function deduplicaUrnNormattiva(urns) {
+    return [...new Set(urns.filter((urn) => urn.startsWith("urn:nir:stato:")))];
 }
 function tipoAttoNormattivaPerUrn(tipoAtto, normalized) {
     if (tipoAtto === "legge" || /\b(?:legge|l\.)\b/.test(normalized)) {
@@ -1164,23 +1299,23 @@ function estraiAtto(normalized) {
     }
     const patterns = [
         {
-            regex: /\b(?:decreto\s+legislativo|d\s*\.?\s*lgs\s*\.?|dlgs)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|del(?:l'anno)?\s+)([0-9]{4})\b/,
+            regex: /\b(?:decreto\s+legislativo|d\s*\.?\s*lgs\s*\.?|dlgs)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
             tipoAtto: "decreto-legislativo"
         },
         {
-            regex: /\b(?:decreto\s+legge|d\s*\.?\s*l\s*\.?|dl)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|del(?:l'anno)?\s+)([0-9]{4})\b/,
+            regex: /\b(?:decreto\s+legge|d\s*\.?\s*l\s*\.?|dl)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
             tipoAtto: "decreto-legge"
         },
         {
-            regex: /\b(?:legge|l\s*\.?)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|del(?:l'anno)?\s+)([0-9]{4})\b/,
+            regex: /\b(?:legge|l\s*\.?)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
             tipoAtto: "legge"
         },
         {
-            regex: /\b(?:regolamento)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|del(?:l'anno)?\s+)([0-9]{4})\b/,
+            regex: /\b(?:regolamento)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
             tipoAtto: "regolamento"
         },
         {
-            regex: /\b(?:regio\s+decreto|r\s*\.?\s*d\s*\.?|atto|altro)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|del(?:l'anno)?\s+)([0-9]{4})\b/
+            regex: /\b(?:regio\s+decreto|r\s*\.?\s*d\s*\.?|atto|altro)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/
         }
     ];
     for (const pattern of patterns) {
