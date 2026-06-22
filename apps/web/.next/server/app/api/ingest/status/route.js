@@ -1,0 +1,7 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/ingest/status/route.js")
+R.c("server/chunks/[root-of-the-server]__1q9xhhc._.js")
+R.c("server/chunks/[root-of-the-server]__1zgpnsr._.js")
+R.c("server/chunks/0rrk_next_0u1_yry._.js")
+R.c("server/chunks/apps_web__next-internal_server_app_api_ingest_status_route_actions_0qc61lu.js")
+R.m(139)
+module.exports=R.m(139).exports

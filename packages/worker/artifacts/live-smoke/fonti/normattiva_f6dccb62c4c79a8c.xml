@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2001/03/30/165" />
+          <FRBRdate date="2001-03-30" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="165" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2001/03/30/165/ita@2011-02-27" />
+          <FRBRdate date="2011-02-27" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 30 marzo 2001, n. 165 Norme generali sull'ordinamento del lavoro alle dipendenze delle amministrazioni pubbliche.</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        <heading>Finalita ed ambito di applicazione ( Art. 1 del d.lgs. n. 29 del 1993 , come modificato dall' art. 1 del d.lgs. n. 80 del 1998 )</heading>
+        <paragraph eId="art_1__para_1_le_disposizioni_del_presente_decreto_disciplinano_l_organizzazione_degli_uffici_e_i_rapporti_di_lavoro_e_di_impiego_alle_dipendenze_delle_amministrazioni_pubbliche_tenuto_conto_delle_autonomie_locali_e_di_quelle_delle_regioni_e_delle_province_autonome_nel_rispetto_dell_articolo_97_comma_primo_della_costituzione_al_fine_di_a_accrescere_l_efficienza_delle_amministrazioni_in_relazione_a_quella_dei_corrispondenti_uffici_e_servizi_dei_paesi_dell_unione_europea_anche_mediante_il_coordinato_sviluppo_di_sistemi_informativi_pubblici_b_razionalizzare_il_costo_del_lavoro_pubblico_contenendo_la_spesa_complessiva_per_il_personale_diretta_e_indiretta_entro_i_vincoli_di_finanza_pubblica_c_realizzare_la_migliore_utilizzazione_delle_risorse_umane_nelle_pubbliche_amministrazioni_assicurando_la_formazione_e_lo_sviluppo_professionale_dei_dipendenti_applicando_condizioni_uniformi_rispetto_a_quelle_del_lavoro_privato_garantendo_pari_opportunita_alle_lavoratrici_ed_ai_lavoratori_nonche_l_assenza_di_qualunque_forma_di_discriminazione_e_di_violenza_morale_o_psichica_2">
+          <num>1. Le disposizioni del presente decreto disciplinano l'organizzazione degli uffici e i rapporti di lavoro e di impiego alle dipendenze delle amministrazioni pubbliche, tenuto conto delle autonomie locali e di quelle delle regioni e delle province autonome, nel rispetto dell' articolo 97, comma primo, della Costituzione , al fine di: a) accrescere l'efficienza delle amministrazioni in relazione a quella dei corrispondenti uffici e servizi dei Paesi dell'Unione europea, anche mediante il coordinato sviluppo di sistemi informativi pubblici; b) razionalizzare il costo del lavoro pubblico, contenendo la spesa complessiva per il personale, diretta e indiretta, entro i vincoli di finanza pubblica; c) realizzare la migliore utilizzazione delle risorse umane nelle pubbliche amministrazioni, assicurando la formazione e lo sviluppo professionale dei dipendenti, applicando condizioni uniformi rispetto a quelle del lavoro privato, garantendo pari opportunita alle lavoratrici ed ai lavoratori nonche l'assenza di qualunque forma di discriminazione e di violenza morale o psichica. 2.</num>
+          <content>
+            <p>Per amministrazioni pubbliche si intendono tutte le amministrazioni dello Stato, ivi compresi gli istituti e scuole di ogni ordine e grado e le istituzioni educative, le aziende ed amministrazioni dello Stato ad ordinamento autonomo, le Regioni, le Province, i Comuni, le Comunita montane, e loro consorzi e associazioni, le istituzioni universitarie, gli Istituti autonomi case popolari, le Camere di commercio, industria, artigianato e agricoltura e loro associazioni, tutti gli enti pubblici non economici nazionali, regionali e locali, le amministrazioni, le aziende e gli enti del Servizio sanitario nazionale l'Agenzia per la rappresentanza negoziale delle pubbliche amministrazioni (ARAN) e le Agenzie di cui al decreto legislativo 30 luglio 1999, n. 300 . Fino alla revisione organica della disciplina di settore, le disposizioni di cui al presente decreto continuano ad applicarsi anche al CONI .</p>
+          </content>
+        </paragraph>
+        <paragraph eId="art_1__para_3">
+          <num>3.</num>
+          <content>
+            <p>Le disposizioni del presente decreto costituiscono principi fondamentali ai sensi dell'articolo 117 della Costituzione. Le Regioni a statuto ordinario si attengono ad esse tenendo conto delle peculiarita dei rispettivi ordinamenti. I principi desumibili dall' articolo 2 della legge 23 ottobre 1992, n. 421 , e successive modificazioni, e dall' articolo 11, comma 4, della legge 15 marzo 1997, n. 59 , e successive modificazioni ed integrazioni, costituiscono altresi, per le Regioni a statuto speciale e per le province autonome di Trento e di Bolzano, norme fondamentali di riforma economico-sociale della Repubblica.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

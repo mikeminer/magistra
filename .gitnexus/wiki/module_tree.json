@@ -1,0 +1,350 @@
+[
+  {
+    "name": "Backup",
+    "slug": "backup",
+    "files": [
+      "scripts/backup_minio.ps1",
+      "scripts/backup_postgres.ps1"
+    ]
+  },
+  {
+    "name": "CitationMetadata",
+    "slug": "citationmetadata",
+    "files": [
+      "packages/domain/src/index.ts"
+    ]
+  },
+  {
+    "name": "CorpusNormattiva",
+    "slug": "corpusnormattiva",
+    "files": [
+      "packages/ingest/src/storage.ts"
+    ]
+  },
+  {
+    "name": "Database",
+    "slug": "database",
+    "files": [
+      "packages/database/src/index.ts",
+      "packages/database/test/database.test.ts"
+    ]
+  },
+  {
+    "name": "Documentation",
+    "slug": "documentation",
+    "files": [
+      "scripts/check_docs.py"
+    ]
+  },
+  {
+    "name": "EmbeddingProvider",
+    "slug": "embeddingprovider",
+    "files": [
+      "packages/llm/src/index.ts"
+    ]
+  },
+  {
+    "name": "Evaluation",
+    "slug": "evaluation",
+    "files": [
+      "packages/evaluation/src/index.ts"
+    ]
+  },
+  {
+    "name": "GazzettaUfficialeAdapter",
+    "slug": "gazzettaufficialeadapter",
+    "files": [
+      "packages/sources/src/index.ts"
+    ]
+  },
+  {
+    "name": "Ingest",
+    "slug": "ingest",
+    "files": [
+      "packages/ingest/src/index.ts",
+      "packages/worker/src/index.ts"
+    ]
+  },
+  {
+    "name": "OpzioniRetrievalIbrido",
+    "slug": "opzioniretrievalibrido",
+    "files": [
+      "packages/retrieval/src/index.ts"
+    ]
+  },
+  {
+    "name": "Retrieval",
+    "slug": "retrieval",
+    "files": [
+      "packages/worker/src/status.ts"
+    ]
+  },
+  {
+    "name": "Other",
+    "slug": "other",
+    "files": [],
+    "children": [
+      {
+        "name": "Other — Dockerfile",
+        "slug": "other-dockerfile",
+        "files": [
+          "Dockerfile"
+        ]
+      },
+      {
+        "name": "Other — README.md",
+        "slug": "other-readme-md",
+        "files": [
+          "README.md"
+        ]
+      },
+      {
+        "name": "Other — ROADMAP.md",
+        "slug": "other-roadmap-md",
+        "files": [
+          "ROADMAP.md"
+        ]
+      },
+      {
+        "name": "Other — api",
+        "slug": "other-api",
+        "files": [
+          "apps/api/package.json",
+          "apps/api/src/server.ts",
+          "apps/api/tsconfig.build.json",
+          "apps/api/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — web",
+        "slug": "other-web",
+        "files": [
+          "apps/web/AGENTS.md",
+          "apps/web/CLAUDE.md",
+          "apps/web/next.config.ts",
+          "apps/web/package.json",
+          "apps/web/src/app/api/ask/route.ts",
+          "apps/web/src/app/api/documents/[id]/route.ts",
+          "apps/web/src/app/api/documents/route.ts",
+          "apps/web/src/app/api/health/route.ts",
+          "apps/web/src/app/api/ingest/status/route.ts",
+          "apps/web/src/app/api/review/queue/[id]/route.ts",
+          "apps/web/src/app/api/review/queue/route.ts",
+          "apps/web/src/app/api/sources/[id]/route.ts",
+          "apps/web/src/app/globals.css",
+          "apps/web/src/app/layout.tsx",
+          "apps/web/src/app/page.tsx",
+          "apps/web/src/components/console-domanda.tsx",
+          "apps/web/src/components/pannello-operativo.tsx",
+          "apps/web/src/components/stato-ingest.tsx",
+          "apps/web/src/components/theme-toggle.tsx",
+          "apps/web/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — certs",
+        "slug": "other-certs",
+        "files": [
+          "certs/README.md"
+        ]
+      },
+      {
+        "name": "Other — compose.yml",
+        "slug": "other-compose-yml",
+        "files": [
+          "compose.yml"
+        ]
+      },
+      {
+        "name": "Other — corpora",
+        "slug": "other-corpora",
+        "files": [
+          "corpora/normattiva-pa-pilota.json",
+          "corpora/normattiva-produzione.json"
+        ]
+      },
+      {
+        "name": "Other — docs",
+        "slug": "other-docs",
+        "files": [
+          "docs/README.md",
+          "docs/architecture.md",
+          "docs/data-sources.md",
+          "docs/deployment.md",
+          "docs/development.md",
+          "docs/domain-model.md",
+          "docs/source-policy.md"
+        ]
+      },
+      {
+        "name": "Other — decisions",
+        "slug": "other-decisions",
+        "files": [
+          "docs/decisions/0001-stack-baseline.md"
+        ]
+      },
+      {
+        "name": "Other — okf",
+        "slug": "other-okf",
+        "files": [
+          "docs/okf/architettura-backend-express.md",
+          "docs/okf/architettura-documenti-utente.md",
+          "docs/okf/architettura-frontend-next.md",
+          "docs/okf/architettura-minio.md",
+          "docs/okf/architettura-postgres-pgvector.md",
+          "docs/okf/architettura-produzione.md",
+          "docs/okf/architettura-provider-modelli.md",
+          "docs/okf/architettura-retrieval.md",
+          "docs/okf/architettura-review-umana.md",
+          "docs/okf/architettura-self-hosting.md",
+          "docs/okf/architettura-worker-ingest.md",
+          "docs/okf/fonti-eur-lex.md",
+          "docs/okf/fonti-gazzetta-ufficiale.md",
+          "docs/okf/fonti-giurisprudenza.md",
+          "docs/okf/fonti-normattiva-open-data.md",
+          "docs/okf/glossario-abrogazione.md",
+          "docs/okf/glossario-citazione-verificabile.md",
+          "docs/okf/glossario-comma.md",
+          "docs/okf/glossario-embedding.md",
+          "docs/okf/glossario-multivigenza.md",
+          "docs/okf/glossario-rag.md",
+          "docs/okf/glossario-recepimento.md",
+          "docs/okf/glossario-ricerca-semantica.md",
+          "docs/okf/glossario-rubrica.md",
+          "docs/okf/glossario-testo-vigente.md",
+          "docs/okf/glossario-vector-db.md",
+          "docs/okf/glossario-vigenza.md",
+          "docs/okf/grafo-riferimenti.md",
+          "docs/okf/index.md",
+          "docs/okf/modello-akoma-ntoso.md",
+          "docs/okf/modello-chunk-citabile.md",
+          "docs/okf/modello-eli.md",
+          "docs/okf/modello-frbr.md",
+          "docs/okf/modello-item-fonte.md",
+          "docs/okf/modello-manifestazione.md",
+          "docs/okf/modello-norma-work.md",
+          "docs/okf/modello-riferimento-normativo.md",
+          "docs/okf/modello-unita-strutturale.md",
+          "docs/okf/modello-versione-expression.md",
+          "docs/okf/modello-xml-nir.md",
+          "docs/okf/multivigenza.md",
+          "docs/okf/normalizzazione-testo.md",
+          "docs/okf/parsing-akn-act.md",
+          "docs/okf/parsing-articolo.md",
+          "docs/okf/parsing-comma.md",
+          "docs/okf/tracciabilita-citazioni.md"
+        ]
+      },
+      {
+        "name": "Other — package.json",
+        "slug": "other-package-json",
+        "files": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "Other — backend",
+        "slug": "other-backend",
+        "files": [
+          "packages/backend/package.json",
+          "packages/backend/src/index.ts",
+          "packages/backend/tsconfig.build.json",
+          "packages/backend/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — database",
+        "slug": "other-database",
+        "files": [
+          "packages/database/README.md",
+          "packages/database/migrations/0001_schema.sql",
+          "packages/database/migrations/0002_operational_jobs.sql",
+          "packages/database/migrations/0003_review_queue.sql",
+          "packages/database/migrations/0004_product_workflows.sql",
+          "packages/database/package.json",
+          "packages/database/tsconfig.build.json",
+          "packages/database/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — domain",
+        "slug": "other-domain",
+        "files": [
+          "packages/domain/package.json",
+          "packages/domain/test/domain.test.mjs",
+          "packages/domain/tsconfig.build.json",
+          "packages/domain/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — evaluation",
+        "slug": "other-evaluation",
+        "files": [
+          "packages/evaluation/package.json",
+          "packages/evaluation/test/evaluation.test.ts",
+          "packages/evaluation/tsconfig.build.json",
+          "packages/evaluation/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — ingest",
+        "slug": "other-ingest",
+        "files": [
+          "packages/ingest/package.json",
+          "packages/ingest/src/cli.ts",
+          "packages/ingest/test/ingest.test.ts",
+          "packages/ingest/tsconfig.build.json",
+          "packages/ingest/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — llm",
+        "slug": "other-llm",
+        "files": [
+          "packages/llm/package.json",
+          "packages/llm/test/llm.test.ts",
+          "packages/llm/tsconfig.build.json",
+          "packages/llm/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — retrieval",
+        "slug": "other-retrieval",
+        "files": [
+          "packages/retrieval/package.json",
+          "packages/retrieval/test/retrieval.test.ts",
+          "packages/retrieval/tsconfig.build.json",
+          "packages/retrieval/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — sources",
+        "slug": "other-sources",
+        "files": [
+          "packages/sources/package.json",
+          "packages/sources/test/sources.test.ts",
+          "packages/sources/tsconfig.build.json",
+          "packages/sources/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — worker",
+        "slug": "other-worker",
+        "files": [
+          "packages/worker/package.json",
+          "packages/worker/src/cli.ts",
+          "packages/worker/test/worker.test.ts",
+          "packages/worker/tsconfig.build.json",
+          "packages/worker/tsconfig.json"
+        ]
+      },
+      {
+        "name": "Other — tsconfig.base.json",
+        "slug": "other-tsconfig-base-json",
+        "files": [
+          "tsconfig.base.json"
+        ]
+      }
+    ]
+  }
+]

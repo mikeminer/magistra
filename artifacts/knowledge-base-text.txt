@@ -1,0 +1,402 @@
+
+
+===== PAGINA 1 =====
+Italian-OSS-Legal-Platform
+Knowledge base — bundle Open Knowledge Format (OKF)
+Generato il 2026-06-18 · 46 documenti
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 1/17
+
+===== PAGINA 2 =====
+Indice
+Knowledge base Italian-OSS-Legal-Platform
+Fonti dei dati
+Normattiva — Open Data
+Gazzetta Ufficiale
+EUR-Lex — Diritto dell'Unione Europea
+Giurisprudenza
+Modello dati e parsing Akoma Ntoso
+Il modello FRBR di Akoma Ntoso
+Identificazione — URI ELI
+Struttura del documento AKN
+Pipeline di trasformazione
+Norma (Work)
+Versione (Expression)
+Unità (articolo / comma)
+Chunk (ricerca semantica)
+Riferimento (cross-reference)
+Architettura
+Frontend (Next.js)
+Backend / API (Node)
+Indice normativo + Vector DB
+Object storage (S3-compatibile)
+Provider LLM (configurabile)
+Flusso di una domanda (RAG)
+Glossario
+Norma / atto normativo
+Vigenza
+Multivigenza
+Testo vigente
+Testo originario
+Abrogazione
+Comma
+Rubrica
+Recepimento
+Giurisprudenza
+Akoma Ntoso (AKN / LegalDOCML)
+XML NIR (NormeInRete)
+ELI (European Legislation Identifier)
+FRBR
+Work / Expression / Manifestation / Item
+RAG (Retrieval-Augmented Generation)
+Embedding
+Ricerca semantica
+Chunk
+Vector DB
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 2/17
+
+===== PAGINA 3 =====
+Self-hosting
+Citazione verificabile
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 3/17
+
+===== PAGINA 4 =====
+Knowledge base — Italian-OSS-Legal-Platform
+Questa cartella è un bundle Open Knowledge Format (OKF) v0.1: una directory di file Markdown
+con frontmatter YAML, leggibile da persone e agenti AI senza alcun SDK o piattaforma proprietaria.
+Convenzioni del bundle
+• Un file = un concetto. Ogni documento descrive una singola entità (una fonte, un'entità dati, un
+componente, un termine).
+• Frontmatter YAML in testa a ogni file. L'unico campo obbligatorio è type; title, description,
+resource, tags, timestamp sono opzionali.
+• index.md in ogni cartella descrive e indicizza i concetti contenuti.
+• Collegamenti tra concetti con percorsi relativi alla radice del bundle, es. [Norma](/modello-
+dati/norma.md).
+Aree
+• Fonti dei dati — fonti normative aperte, formati e condizioni di riuso.
+• Modello dati — FRBR, ELI, struttura Akoma Ntoso, entità interne e pipeline.
+• Architettura — componenti del sistema e flusso RAG.
+• Glossario — termini giuridici e tecnici.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 4/17
+
+===== PAGINA 5 =====
+Fonti dei dati
+Questa cartella mappa le fonti del diritto utilizzabili da Italian-OSS-Legal-Platform, i formati disponibili
+e le condizioni di riuso. È il riferimento per chiunque lavori alla pipeline di ingest.
+Concetti
+• Normattiva — Open Data — fonte primaria della legislazione statale italiana.
+• Gazzetta Ufficiale — pubblicazione ufficiale degli atti.
+• EUR-Lex — diritto dell'Unione Europea.
+• Giurisprudenza — sentenze e orientamenti in formato aperto.
+Principi di trattamento dei dati
+• Attribuzione: mantenere e mostrare la paternità.
+• Tracciabilità: per ogni documento conservare fonte, URI ELI, formato originario, data di
+acquisizione e versione.
+• Nessuna alterazione del significato: il testo normativo non va modificato; eventuali
+normalizzazioni devono essere reversibili e documentate.
+• Aggiornamento: prevedere ri-ingest periodico per recepire modifiche e nuove versioni
+(multivigenza).
+Normattiva — Open Data (fonte primaria)
+Portale: https://dati.normattiva.it/
+La fonte principale per la legislazione statale italiana (leggi, decreti legge, decreti legislativi, regi
+decreti, codici). Realizzato dall'Istituto Poligrafico e Zecca dello Stato su iniziativa del comitato di
+gestione Normattiva.
+Formati disponibili
+Formato Descrizione Uso in Italian-OSS-Legal-
+Platform
+Akoma Ntoso XML giuridico strutturato, standard OASIS Fonte canonica per il
+(LegalDOCML) parsing
+XML NIR Standard XML AgID precedente Fallback / atti storici
+(NormeInRete)
+JSON Rappresentazione strutturata Ingest rapido / metadati
+HTML Testo formattato Anteprima / debug
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 5/17
+
+===== PAGINA 6 =====
+URI ELI Identificatori permanenti (European Chiave stabile di riferimento
+Legislation Identifier)
+Esportazioni temporali
+• Versione originaria: testo come pubblicato in origine.
+• Vigente a una data: testo in vigore a una data specifica.
+• Multivigente: tutte le versioni nel tempo (fondamentale per il confronto storico). Vedi multivigenza.
+Gazzetta Ufficiale
+Portale: https://www.gazzettaufficiale.it/
+Fonte ufficiale di pubblicazione degli atti normativi. Utile per atti recenti, avvisi e per la verifica della
+data di pubblicazione/entrata in vigore.
+EUR-Lex — Diritto dell'Unione Europea
+Portale: https://eur-lex.europa.eu/
+Regolamenti, direttive e decisioni UE, spesso collegati alla normativa nazionale di recepimento.
+Disponibili formati strutturati e URI ELI europei, con servizi di accesso (incl. SPARQL/Cellar).
+Giurisprudenza
+Sentenze e orientamenti, dove disponibili in formato aperto:
+• Corte Costituzionale — https://www.cortecostituzionale.it/
+• Corte di Cassazione — banca dati di legittimità (accesso e riuso variabili)
+Vedi anche il termine giurisprudenza nel glossario.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 6/17
+
+===== PAGINA 7 =====
+Modello dati e parsing Akoma Ntoso
+Questa cartella descrive come Italian-OSS-Legal-Platform rappresenta una norma italiana a partire
+dai dati di Normattiva (Akoma Ntoso / ELI) e come la trasforma in unità interrogabili per la ricerca
+semantica e le citazioni.
+È una bozza concettuale: lo schema serve a ragionare sui dati, non è ancora un'implementazione.
+Concetti di base
+• Il modello FRBR — Work / Expression / Manifestation / Item.
+• Identificazione: URI ELI — chiave primaria stabile.
+• Struttura del documento AKN — articolo e comma.
+• Pipeline di trasformazione — da Normattiva all'indice vettoriale.
+Entità del modello dati interno
+• Norma (Work)
+• Versione (Expression)
+• Unità (articolo / comma)
+• Chunk (ricerca semantica)
+• Riferimento (cross-reference)
+Il modello FRBR di Akoma Ntoso
+Akoma Ntoso adotta il modello FRBR per gestire le numerose derivazioni dei testi normativi
+(modifiche, versioni, lingue). Quattro livelli:
+Livello Significato Esempio
+Work La norma in astratto, in tutte le sue versioni "L. 241/1990"
+Expression Una versione specifica nel tempo/lingua "L. 241/1990 vigente al 2020-01-01"
+Manifestatio Una rappresentazione in un formato il file XML AKN di quella versione
+n
+Item La copia concreta (file) il file scaricato e archiviato
+Questi livelli sono dichiarati nel blocco <meta> -> <identification> tramite <FRBRWork>,
+<FRBRExpression>, <FRBRManifestation>, <FRBRItem>.
+Questo modello è il motivo per cui Italian-OSS-Legal-Platform può distinguere "il testo vigente oggi"
+da "il testo in vigore nel 2015". Le entità interne Norma e Versione mappano rispettivamente Work ed
+Expression.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 7/17
+
+===== PAGINA 8 =====
+Identificazione: URI ELI
+Ogni norma è identificata da una URI ELI (European Legislation Identifier) permanente. Italian-OSS-
+Legal-Platform usa l'ELI come chiave primaria stabile per collegare versioni, citazioni e riferimenti
+incrociati.
+Esempio concettuale di pattern ELI:
+/eli/it/stato/legge/1990/08/07/241/...
+Vantaggi: stabilità nel tempo, interoperabilità europea, deduplicazione affidabile.
+Struttura del documento AKN
+Un atto (<act>) si articola tipicamente in:
+<akomaNtoso>
+<act>
+<meta> … identificazione FRBR, riferimenti, cicli di vita …
+<preface> … titolo, intestazione …
+<preamble> … premesse …
+<body>
+<article> (unità di base: articolo)
+<num> (numero articolo)
+<heading> (rubrica)
+<paragraph> (comma)
+<num> (numero comma)
+<content> (testo)
+…
+<conclusions> … formule finali …
+L'articolo (<article>) è l'unità fondamentale; il comma (<paragraph>) è la sotto-unità più
+rilevante per le citazioni puntuali. Queste unità sono modellate dall'entità Unità.
+Pipeline di trasformazione
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 8/17
+
+===== PAGINA 9 =====
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 9/17
+
+===== PAGINA 10 =====
+Principio chiave: ogni Chunk porta con sé i metadati necessari a costruire una citazione verificabile
+(ELI + articolo + comma + data di vigenza). Senza questi metadati il chunk non entra nell'indice.
+Le fasi attingono dalla fonte Normattiva e alimentano l'indice normativo.
+Entità Norma (Work)
+Astratta dai formati di origine, indipendente dal database scelto. Corrisponde al livello Work del
+modello FRBR.
+Campo Descrizione
+eli URI ELI (chiave primaria)
+tipo_atto legge, decreto legge, d.lgs., codice, …
+numero numero dell'atto
+data data dell'atto
+titolo titolo / oggetto
+fonte provenienza (es. Normattiva)
+Una Norma ha una o più Versioni.
+Entità Versione (Expression)
+Corrisponde al livello Expression del modello FRBR: una versione specifica di una Norma nel tempo.
+Campo Descrizione
+id identificativo versione
+eli riferimento alla Norma
+vigenza_da / vigenza_a intervallo di vigenza
+stato vigente / abrogata / originaria
+Una Versione contiene molte Unità.
+Entità Unita (articolo/comma)
+Unità strutturale del testo normativo, derivata dalla struttura del documento AKN.
+Campo Descrizione
+id identificativo unità
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 10/17
+
+===== PAGINA 11 =====
+versione_id riferimento alla Versione
+tipo articolo / comma / lettera
+numero es. "art. 3, comma 2"
+percorso path gerarchico nel documento
+testo testo pulito dell'unità
+eli_unita URI ELI a livello di articolo (se disponibile)
+Da un'Unità si generano uno o più Chunk.
+Entità Chunk (per la ricerca semantica)
+Porzione di testo indicizzata per il retrieval. Vedi chunk e ricerca semantica.
+Campo Descrizione
+id identificativo chunk
+unita_id unità di origine
+testo porzione di testo
+embedding vettore per la ricerca semantica
+metadati eli, articolo, comma, vigenza -> per la citazione
+I Chunk sono prodotti dalla pipeline di trasformazione e popolano l'indice normativo.
+Entità Riferimento (cross-reference)
+Collegamento tra norme o unità, base del grafo delle norme.
+Campo Descrizione
+da_eli norma/unità citante
+a_eli norma/unità citata
+tipo rinvio, modifica, abrogazione, recepimento UE
+I Riferimenti sono estratti nell'ultima fase della pipeline di trasformazione.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 11/17
+
+===== PAGINA 12 =====
+Architettura
+Bozza di architettura per Italian-OSS-Legal-Platform. In questa fase serve a orientare le scelte; non è
+ancora un'implementazione.
+Vista d'insieme
+Concetti
+• Frontend (Next.js)
+• Backend / API (Node)
+• Indice normativo + Vector DB
+• Object storage (S3-compatibile)
+• Provider LLM (configurabile)
+• Flusso di una domanda (RAG)
+Principi architetturali
+• Citazione prima di tutto: nessuna risposta normativa senza fonte recuperata dall'indice.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 12/17
+
+===== PAGINA 13 =====
+• Separazione dati/modello: la qualità dipende dai dati e dal retrieval, non solo dall'LLM.
+• Self-hosting possibile: l'architettura deve poter girare interamente sotto il controllo dell'utente.
+• Modularità: provider LLM, storage e database intercambiabili.
+Frontend (Next.js / TypeScript)
+Interfaccia di chat, ricerca, caricamento e visualizzazione documenti con citazioni cliccabili che
+rimandano alla fonte (ELI / Normattiva).
+Backend / API (Node / TypeScript)
+Orchestrazione del flusso RAG (retrieval -> costruzione contesto -> generazione), gestione utenti,
+gestione documenti caricati. Vedi il flusso di una domanda.
+Indice normativo + Vector DB
+PostgreSQL con pgvector (Vector DB) per ricerca semantica e query strutturate sui metadati (filtri
+per tipo di atto, vigenza, ecc.). Alimentato dalla pipeline di trasformazione e popolato di Chunk.
+Object storage (S3-compatibile: MinIO)
+Conserva i documenti caricati dagli utenti e gli artefatti di ingest. Si usa MinIO, object storage open
+source compatibile con l'API S3, eseguito in self-hosting tramite Docker Compose insieme al resto
+dello stack.
+Provider LLM (configurabile)
+Almeno un provider a scelta; obiettivo di lungo periodo: supportare modelli locali/self-hosted per
+privacy e sovranità dei dati. Il provider genera le risposte nel flusso RAG.
+Flusso di una domanda (RAG)
+1. L'utente pone una domanda in linguaggio naturale.
+2. Il backend recupera i Chunk più rilevanti dall'indice (ricerca semantica + filtri).
+3. Costruisce un contesto con i testi normativi e i relativi metadati di citazione.
+4. L'LLM genera la risposta citando articolo, comma e fonte (ELI).
+5. Il frontend mostra la risposta con i link verificabili alle fonti.
+Vedi RAG e citazione verificabile.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 13/17
+
+===== PAGINA 14 =====
+Glossario
+Termini giuridici e tecnici ricorrenti nel progetto Italian-OSS-Legal-Platform. Ogni termine è un
+concetto OKF autonomo, così da poter essere referenziato dagli altri documenti del bundle.
+Termini giuridici
+• Norma / atto normativo
+• Vigenza
+• Multivigenza
+• Testo vigente
+• Testo originario
+• Abrogazione
+• Comma
+• Rubrica
+• Recepimento
+• Giurisprudenza
+Standard e formati
+• Akoma Ntoso (AKN / LegalDOCML)
+• XML NIR (NormeInRete)
+• ELI (European Legislation Identifier)
+• FRBR
+• Work / Expression / Manifestation / Item
+Termini tecnici
+• RAG (Retrieval-Augmented Generation)
+• Embedding
+• Ricerca semantica
+• Chunk
+• Vector DB
+• Self-hosting
+• Citazione verificabile
+Norma / atto normativo
+Disposizione giuridica vincolante (legge, decreto, regolamento, ecc.). Nel modello dati è
+rappresentata dall'entità Norma.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 14/17
+
+===== PAGINA 15 =====
+Vigenza
+Periodo in cui una norma è in vigore. Una norma può avere più versioni nel tempo. Vedi anche
+multivigenza.
+Multivigenza
+Disponibilità di tutte le versioni storiche di una norma, ciascuna con il proprio intervallo di vigenza. È
+fornita da Normattiva ed è fondamentale per il confronto storico.
+Testo vigente
+Versione di una norma attualmente in vigore (a una certa data). Contrapposto al testo originario.
+Testo originario
+Versione della norma come pubblicata in origine, prima di modifiche. Contrapposto al testo vigente.
+Abrogazione
+Cessazione dell'efficacia di una norma, totale o parziale. È uno dei tipi di Riferimento tra norme.
+Comma
+Suddivisione interna di un articolo; unità tipica per le citazioni puntuali. Nel modello è rappresentato
+dall'entità Unità e mappa l'elemento <paragraph> della struttura AKN.
+Rubrica
+Titolo/intestazione di un articolo. Corrisponde all'elemento <heading> nella struttura AKN.
+Recepimento
+Atto nazionale che dà attuazione a una direttiva UE. Collega la normativa nazionale alle fonti EUR-Lex
+; è uno dei tipi di Riferimento.
+Giurisprudenza
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 15/17
+
+===== PAGINA 16 =====
+Insieme delle decisioni dei giudici (es. Cassazione, Corte Costituzionale). Come fonte dati vedi
+Giurisprudenza.
+Akoma Ntoso (AKN / LegalDOCML)
+Standard XML internazionale (OASIS) per rappresentare documenti giuridici in modo strutturato, con
+metadati. Vedi la struttura del documento AKN e il modello FRBR.
+XML NIR (NormeInRete)
+Standard XML AgID precedente ad Akoma Ntoso per le norme italiane. Usato come fallback o per atti
+storici (vedi Normattiva).
+ELI (European Legislation Identifier)
+Sistema di URI permanenti per identificare in modo stabile e interoperabile gli atti normativi a livello
+europeo. Usato come chiave primaria: vedi Identificazione — URI ELI.
+FRBR
+Modello (Work / Expression / Manifestation / Item) usato da Akoma Ntoso per gestire versioni, formati
+e derivazioni di un documento. Vedi il modello FRBR di Akoma Ntoso e Work / Expression /
+Manifestation / Item.
+Work / Expression / Manifestation / Item
+I quattro livelli del modello FRBR: rispettivamente la norma astratta, una sua versione, una sua
+rappresentazione in un formato, la copia concreta. Nel modello dati Norma = Work e Versione =
+Expression.
+RAG (Retrieval-Augmented Generation)
+Tecnica in cui l'LLM genera risposte basandosi su documenti recuperati da un indice, anziché solo
+sulla memoria del modello. Permette citazioni verificabili. Vedi il flusso di una domanda (RAG).
+Embedding
+Rappresentazione vettoriale di un testo, usata per la ricerca semantica. Ogni Chunk ne ha uno.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 16/17
+
+===== PAGINA 17 =====
+Ricerca semantica
+Ricerca per significato/concetto, non solo per corrispondenza di parole chiave. Si appoggia agli
+embedding e al Vector DB.
+Chunk
+Porzione di testo (es. un comma) indicizzata per il retrieval, con i metadati di citazione. Vedi l'entità
+Chunk.
+Vector DB
+Database ottimizzato per ricerche su vettori (es. PostgreSQL con pgvector). Nel progetto è l'indice
+normativo.
+Self-hosting
+Esecuzione del software interamente su infrastruttura controllata dall'utente. È un principio
+architetturale del progetto (privacy e sovranità dei dati).
+Citazione verificabile
+Riferimento di una risposta a una fonte ufficiale identificabile (ELI + articolo + comma + data di
+vigenza). È il principio cardine del flusso RAG: nessuna risposta normativa senza fonte.
+Italian-OSS-Legal-Platform · Knowledge base OKF · Pag. 17/17

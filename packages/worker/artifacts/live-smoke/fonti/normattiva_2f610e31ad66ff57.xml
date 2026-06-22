@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2003/06/30/196" />
+          <FRBRdate date="2003-06-30" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="196" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2003/06/30/196/ita@2018-09-19" />
+          <FRBRdate date="2018-09-19" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 30 giugno 2003, n. 196 Codice in materia di protezione dei dati personali &lt;em&gt;&lt;strong&gt;((, recante disposizioni per l'adeguamento dell'ordinamento nazionale al regolamento (UE) n. 2016/679 del Parlamento europeo e del Consiglio, del 27 aprile 2016, relativo alla protezione delle persone fisiche con riguardo al trattamento dei dati personali, nonche' alla libera circolazione di tali dati e che abroga la direttiva 95/46/CE))&lt;/strong&gt;&lt;/em&gt;.</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        <heading>(Oggetto).</heading>
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>Il trattamento dei dati personali avviene secondo le norme del regolamento (UE) 2016/679 del Parlamento europeo e del Consiglio, del 27 aprile 2016 , di seguito &amp;laquo;Regolamento&amp;raquo;, e del presente codice, nel rispetto della dignita umana, dei diritti e delle liberta fondamentali della persona.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

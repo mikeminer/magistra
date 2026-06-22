@@ -1,0 +1,3 @@
+module.exports=[77930,a=>{"use strict";var b=a.i(34777);a.s(["default",0,function({children:a}){return(0,b.jsx)("html",{lang:"it",children:(0,b.jsx)("body",{children:a})})},"metadata",0,{title:"Magistra OS",description:"Ricerca giuridica con citazioni obbligatorie per fonti pubbliche italiane."}])},34005,function(a){a.n(a.i(77930))}];
+
+//# sourceMappingURL=apps_web_src_app_layout_tsx_1yx9ufn._.js.map

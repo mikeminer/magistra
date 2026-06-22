@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2013/03/14/33" />
+          <FRBRdate date="2013-03-14" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="33" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2013/03/14/33/ita@2016-06-23" />
+          <FRBRdate date="2016-06-23" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 14 marzo 2013, n. 33 &lt;em&gt;&lt;strong&gt;((Riordino della disciplina riguardante il diritto di accesso civico e gli obblighi di pubblicita', trasparenza e diffusione di informazioni da parte delle pubbliche amministrazioni.))&lt;/strong&gt;&lt;/em&gt; (13G00076)</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        <heading>Principio generale di trasparenza</heading>
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>La trasparenza e intesa come accessibilita totale dei dati e documenti detenuti dalle pubbliche amministrazioni, allo scopo di tutelare i diritti dei cittadini, promuovere la partecipazione degli interessati all'attivita amministrativa e favorire forme diffuse di controllo sul perseguimento delle funzioni istituzionali e sull'utilizzo delle risorse pubbliche.</p>
+          </content>
+        </paragraph>
+        <paragraph eId="art_1__para_2">
+          <num>2.</num>
+          <content>
+            <p>La trasparenza, nel rispetto delle disposizioni in materia di segreto di Stato, di segreto d'ufficio, di segreto statistico e di protezione dei dati personali, concorre ad attuare il principio democratico e i principi costituzionali di eguaglianza, di imparzialita, buon andamento, responsabilita, efficacia ed efficienza nell'utilizzo di risorse pubbliche, integrita e lealta nel servizio alla nazione. Essa e condizione di garanzia delle liberta individuali e collettive, nonche dei diritti civili, politici e sociali, integra il diritto ad una buona amministrazione e concorre alla realizzazione di una amministrazione aperta, al servizio del cittadino.</p>
+          </content>
+        </paragraph>
+        <paragraph eId="art_1__para_3">
+          <num>3.</num>
+          <content>
+            <p>Le disposizioni del presente decreto, nonche le norme di attuazione adottate ai sensi dell'articolo 48, integrano l'individuazione del livello essenziale delle prestazioni erogate dalle amministrazioni pubbliche a fini di trasparenza, prevenzione, contrasto della corruzione e della cattiva amministrazione, a norma dell' articolo 117, secondo comma, lettera m), della Costituzione e costituiscono altresi esercizio della funzione di coordinamento informativo statistico e informatico dei dati dell'amministrazione statale, regionale e locale, di cui all'articolo 117, secondo comma, lettera r), della Costituzione.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

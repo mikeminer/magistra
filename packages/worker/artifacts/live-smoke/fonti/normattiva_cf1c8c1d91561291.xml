@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2000/08/18/267" />
+          <FRBRdate date="2000-08-18" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="267" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2000/08/18/267/ita@2000-10-13" />
+          <FRBRdate date="2000-10-13" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 18 agosto 2000, n. 267 Testo unico delle leggi sull'ordinamento degli enti locali.</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>IL PRESIDENTE DELLA REPUBBLICA Visti gli articoli 76 e 87 della Costituzione ; Visto l' articolo 14 della legge 23 agosto 1988, n. 400 ; Visto l' articolo 31 della legge 3 agosto 1999, n. 265 , recante delega al Governo per l'adozione di un testo unico in materia di ordinamento degli enti locali; Vista la preliminare deliberazione del Consiglio dei Ministri, adottata nella riunione del 20 aprile 2000; Acquisiti i pareri delle competenti Commissioni del Senato della Repubblica e della Camera dei Deputati; Udito il parere del Consiglio di Stato, espresso nell'adunanza generale dell'8 giugno 2000; Acquisito il parere della Conferenza Stato-citta ed autonomie locali e della Conferenza unificata, istituita ai sensi del decreto legislativo 28 agosto 1997, n. 281 ; Vista la deliberazione del Consiglio dei Ministri, adottata nella riunione del 4 agosto 2000; Sulla proposta del Ministro dell'interno, di concerto con i Ministri per gli affari regionali e della giustizia; Emana il seguente decreto legislativo: Articolo 1. 1. e approvato l'unito testo unico delle leggi sull'ordinamento degli enti locali, composto di 275 articoli.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

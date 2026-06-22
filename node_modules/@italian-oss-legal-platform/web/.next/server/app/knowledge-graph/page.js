@@ -1,0 +1,13 @@
+var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/app/knowledge-graph/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__1jiqo-1._.js")
+R.c("server/chunks/ssr/0rrk_next_dist_esm_build_templates_app-page_13t2p35.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0hs5vxi._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__06ls1b6._.js")
+R.c("server/chunks/ssr/apps_web_src_app_layout_tsx_1yx9ufn._.js")
+R.c("server/chunks/ssr/0rrk_next_dist_client_components_08rm6fq._.js")
+R.c("server/chunks/ssr/0rrk_next_dist_client_components_builtin_forbidden_0hxhgcj.js")
+R.c("server/chunks/ssr/0rrk_next_dist_client_components_builtin_unauthorized_0fou__1.js")
+R.c("server/chunks/ssr/0rrk_next_dist_client_components_builtin_global-error_1dz5dyz.js")
+R.c("server/chunks/ssr/apps_web__next-internal_server_app_knowledge-graph_page_actions_1tn2kbq.js")
+R.m(34724)
+module.exports=R.m(34724).exports

@@ -1,0 +1,4 @@
+{
+  "/api/knowledge-graph/route": "app/api/knowledge-graph/route.js",
+  "/knowledge-graph/page": "app/knowledge-graph/page.js"
+}

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2016/04/18/50" />
+          <FRBRdate date="2016-04-18" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="50" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2016/04/18/50/ita@2023-07-01" />
+          <FRBRdate date="2023-07-01" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 18 aprile 2016, n. 50 &lt;em&gt;&lt;strong&gt;((Codice dei contratti pubblici))&lt;/strong&gt;&lt;/em&gt;. (16G00062)</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>PROVVEDIMENTO ABROGATO DAL D.LGS. 31 MARZO 2023, N. 36 48</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

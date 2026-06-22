@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2023/03/31/36" />
+          <FRBRdate date="2023-03-31" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="36" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2023/03/31/36/ita@2023-04-01" />
+          <FRBRdate date="2023-04-01" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 31 marzo 2023, n. 36 Codice dei contratti pubblici in attuazione dell'articolo 1 della legge 21 giugno 2022, n. 78, recante delega al Governo in materia di contratti pubblici. (23G00044)</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>IL PRESIDENTE DELLA REPUBBLICA Visti gli articoli 76 e 87 della Costituzione ; Visto l' articolo 14 della legge 23 agosto 1988, n. 400 ; Vista la direttiva 2014/23/UE del Parlamento europeo e del Consiglio, del 26 febbraio 2014 , sull'aggiudicazione dei contratti di concessione; Vista la direttiva 2014/24/UE del Parlamento europeo e del Consiglio, del 26 febbraio 2014 , sugli appalti pubblici e che abroga la direttiva 2004/18/CE ; Vista la direttiva 2014/25/UE del Parlamento europeo e del Consiglio, del 26 febbraio 2014 , sulle procedure d'appalto degli enti erogatori nei settori dell'acqua, dell'energia, dei trasporti e dei servizi postali e che abroga la direttiva 2004/17/CE ; Vista la legge 24 dicembre 2012, n. 234 , recante &amp;laquo;Norme generali sulla partecipazione dell'Italia alla formazione e all'attuazione della normativa e delle politiche dell'Unione europea&amp;raquo;; Visto il decreto legislativo 18 aprile 2016, n. 50 , recante &amp;laquo; Codice dei contratti pubblici &amp;raquo;; Vista la legge 21 giugno 2022, n. 78 , recante &amp;laquo;Delega al Governo in materia di contratti pubblici&amp;raquo;; Visto, in particolare, l'articolo 1, comma 4, della citata legge 21 giugno 2022, n. 78 , il quale prevede che il Governo puo avvalersi della facolta di cui all'articolo 14, numero 2°, del testo unico delle leggi sul Consiglio di Stato, di cui al regio decreto 26 giugno 1924, n. 1054 ; Vista la nota in data 28 giugno 2022 con la quale il Presidente del Consiglio dei ministri ha affidato la formulazione del progetto di decreto legislativo recante la disciplina dei contratti pubblici al Consiglio di Stato, ai sensi dell' articolo 1, comma 4, della legge 21 giugno 2022, n. 78 ; Visto il decreto del Presidente del Consiglio di Stato in data 4 luglio 2022 , con il quale la formulazione di detto progetto e stata deferita ad una commissione speciale e ne e stata stabilita la composizione; Visto lo schema di &quot; Codice dei contratti pubblici in attuazione dell' articolo 1 della legge 21 giugno 2022, n. 78 , recante &amp;laquo;Delega al Governo in materia di contratti pubblici&amp;raquo;&quot;, redatto da detta commissione speciale e trasmesso al Governo dal Consiglio di Stato in data 27 ottobre 2022 - 7 dicembre 2022 ; Vista la preliminare deliberazione del Consiglio dei ministri, adottata nella riunione del 16 dicembre 2022; Acquisito il parere della Conferenza unificata di cui all' articolo 8 del decreto legislativo 28 agosto 1997, n. 281, reso in data 26 gennaio 2023 ; Acquisiti i pareri delle competenti commissioni della Camera dei deputati e del Senato della Repubblica; Vista la deliberazione del Consiglio dei ministri, adottata nella riunione del 28 marzo 2023; Sulla proposta del Presidente del Consiglio dei ministri e del Ministro delle infrastrutture e dei trasporti, di concerto con i Ministri per gli affari europei, il Sud, le politiche di coesione e il PNRR, per le riforme istituzionali e la semplificazione normativa, per le disabilita, degli affari esteri e della cooperazione internazionale, dell'interno, della giustizia, della difesa, dell'economia e delle finanze, delle imprese e del made in Italy, dell'ambiente e della sicurezza energetica, del lavoro e delle politiche sociali, e della cultura; EMANA il seguente decreto legislativo: Articolo 1. Principio del risultato. 1. Le stazioni appaltanti e gli enti concedenti perseguono il risultato dell'affidamento del contratto e della sua esecuzione con la massima tempestivita e il migliore rapporto possibile tra qualita e prezzo, nel rispetto dei principi di legalita, trasparenza e concorrenza. 2. La concorrenza tra gli operatori economici e funzionale a conseguire il miglior risultato possibile nell'affidare ed eseguire i contratti. La trasparenza e funzionale alla massima semplicita e celerita nella corretta applicazione delle regole del presente decreto, di seguito denominato &amp;laquo;codice&amp;raquo; e ne assicura la piena verificabilita. 3. Il principio del risultato costituisce attuazione, nel settore dei contratti pubblici, del principio del buon andamento e dei correlati principi di efficienza, efficacia ed economicita. Esso e perseguito nell'interesse della comunita e per il raggiungimento degli obiettivi dell'Unione europea. 4. Il principio del risultato costituisce criterio prioritario per l'esercizio del potere discrezionale e per l'individuazione della regola del caso concreto, nonche per: a) valutare la responsabilita del personale che svolge funzioni amministrative o tecniche nelle fasi di programmazione, progettazione, affidamento ed esecuzione dei contratti; b) attribuire gli incentivi secondo le modalita previste dalla contrattazione collettiva.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

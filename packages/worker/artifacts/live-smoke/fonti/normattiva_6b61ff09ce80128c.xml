@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
+  <act name="decreto-legislativo">
+    <meta>
+      <identification source="#normattiva">
+        <FRBRWork>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2010/07/02/104" />
+          <FRBRdate date="2010-07-02" name="generation" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRnumber value="104" />
+          <FRBRname value="decreto-legislativo" />
+        </FRBRWork>
+        <FRBRExpression>
+          <FRBRthis value="/eli/it/stato/decreto-legislativo/2010/07/02/104/ita@2010-09-16" />
+          <FRBRdate date="2010-09-16" name="version" />
+          <FRBRauthor href="/it/stato" as="#autorita" />
+          <FRBRlanguage language="ita" />
+        </FRBRExpression>
+      </identification>
+    </meta>
+    <preface>
+      <p>
+        <docTitle>DECRETO LEGISLATIVO 2 luglio 2010, n. 104 Attuazione dell'articolo 44 della legge 18 giugno 2009, n. 69, recante delega al governo per il riordino del processo amministrativo. (10G0127)</docTitle>
+      </p>
+    </preface>
+    <body>
+      <article eId="art_1">
+        <num>Art. 1</num>
+        <heading>Approvazione del codice e delle disposizioni connesse</heading>
+        <paragraph eId="art_1__para_1">
+          <num>1.</num>
+          <content>
+            <p>e approvato il codice del processo amministrativo di cui all'allegato 1 al presente decreto.</p>
+          </content>
+        </paragraph>
+        <paragraph eId="art_1__para_2">
+          <num>2.</num>
+          <content>
+            <p>Sono altresi approvate le norme di attuazione di cui all'allegato 2, le norme transitorie di cui all'allegato 3 e le norme di coordinamento e le abrogazioni di cui all'allegato 4.</p>
+          </content>
+        </paragraph>
+      </article>
+    </body>
+  </act>
+</akomaNtoso>

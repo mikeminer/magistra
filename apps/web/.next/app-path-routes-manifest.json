@@ -1,0 +1,15 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/ask/route": "/api/ask",
+  "/api/documents/[id]/route": "/api/documents/[id]",
+  "/api/documents/route": "/api/documents",
+  "/api/health/route": "/api/health",
+  "/api/ingest/status/route": "/api/ingest/status",
+  "/api/knowledge-graph/route": "/api/knowledge-graph",
+  "/api/review/queue/[id]/route": "/api/review/queue/[id]",
+  "/api/review/queue/route": "/api/review/queue",
+  "/api/sources/[id]/route": "/api/sources/[id]",
+  "/knowledge-graph/page": "/knowledge-graph",
+  "/page": "/"
+}
