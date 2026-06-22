@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import vaultHandler from "../api/vault.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..", "public");
@@ -30,6 +31,11 @@ function safeResolve(urlPath) {
 
 createServer(async (request, response) => {
   try {
+    if ((request.url || "").startsWith("/api/vault")) {
+      await vaultHandler(request, response);
+      return;
+    }
+
     let filePath = safeResolve(request.url || "/");
     const fileStat = await stat(filePath).catch(() => null);
 

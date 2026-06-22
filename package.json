@@ -6,7 +6,7 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-vault-data.mjs && node -e \"console.log('Static vault graph ready in public/')\"",
+    "build": "node -e \"console.log('Static vault graph ready in public/')\"",
     "dev:graph": "node scripts/serve-vault-graph.mjs",
     "test": "node scripts/validate-knowledge-base.mjs",
     "test:strict": "node scripts/validate-knowledge-base.mjs --strict",
