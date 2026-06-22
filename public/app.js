@@ -212,59 +212,26 @@ async function loadVault() {
     state.selectedId = null;
     state.localFocusId = null;
     applySourceToInputs();
-    setStatus("Caricamento vault da GitHub...");
+    setStatus("Caricamento vault...");
 
     const [owner, repoName] = parseRepo(state.source.repo);
-    const branch = encodeURIComponent(state.source.branch);
-    const headers = {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    };
-
-    const branchResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/branches/${branch}`,
-      { headers, cache: "no-store" },
-    );
-    assertOk(branchResponse, "Branch GitHub non leggibile");
-    const branchJson = await branchResponse.json();
-    const treeSha = branchJson?.commit?.commit?.tree?.sha;
-    if (!treeSha) throw new Error("Tree SHA non trovato nella risposta GitHub");
-
-    const treeResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/git/trees/${treeSha}?recursive=1`,
-      { headers, cache: "no-store" },
-    );
-    assertOk(treeResponse, "Tree GitHub non leggibile");
-    const treeJson = await treeResponse.json();
-
-    const vaultPath = state.source.path;
-    const markdownFiles = (treeJson.tree || [])
-      .filter((entry) => entry.type === "blob")
-      .filter((entry) => entry.path.startsWith(`${vaultPath}/`))
-      .filter((entry) => entry.path.endsWith(".md"))
-      .filter((entry) => !entry.path.includes("/.obsidian/"))
-      .sort((a, b) => a.path.localeCompare(b.path, "it"));
-
-    if (markdownFiles.length === 0) {
-      throw new Error(`Nessun file Markdown trovato in ${vaultPath}`);
-    }
-
-    setStatus(`Lettura di ${markdownFiles.length} note Markdown...`);
-    const files = await fetchMarkdownFiles(markdownFiles, owner, repoName, state.source.branch);
-    state.graph = buildObsidianGraph(files, {
+    const vault = await loadVaultFiles(owner, repoName);
+    state.graph = buildObsidianGraph(vault.files, {
       ...state.source,
       owner,
       repoName,
-      truncated: Boolean(treeJson.truncated),
+      truncated: vault.truncated,
     });
 
     populateGroupFilter(state.graph.groups);
     refreshView();
     setStatus(
-      treeJson.truncated
+      vault.truncated
         ? "Vault caricato; GitHub segnala tree troncato"
-        : `Vault caricato: ${state.graph.nodes.filter((node) => node.kind === "note").length} note`,
-      treeJson.truncated ? "warn" : "normal",
+        : vault.mode === "bundled"
+          ? `Vault caricato: ${state.graph.nodes.filter((node) => node.kind === "note").length} note (snapshot incluso)`
+          : `Vault caricato: ${state.graph.nodes.filter((node) => node.kind === "note").length} note`,
+      vault.truncated ? "warn" : "normal",
     );
   } catch (error) {
     console.error(error);
@@ -272,6 +239,89 @@ async function loadVault() {
     state.graph = emptyGraph();
     refreshView();
   }
+}
+
+async function loadVaultFiles(owner, repoName) {
+  const bundled = await loadBundledVaultFiles();
+  if (bundled) return bundled;
+
+  return loadGithubVaultFiles(owner, repoName);
+}
+
+async function loadGithubVaultFiles(owner, repoName) {
+  const branch = encodeURIComponent(state.source.branch);
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+
+  const branchResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/branches/${branch}`,
+    { headers, cache: "no-store" },
+  );
+  assertOk(branchResponse, "Branch GitHub non leggibile");
+  const branchJson = await branchResponse.json();
+  const treeSha = branchJson?.commit?.commit?.tree?.sha;
+  if (!treeSha) throw new Error("Tree SHA non trovato nella risposta GitHub");
+
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/trees/${treeSha}?recursive=1`,
+    { headers, cache: "no-store" },
+  );
+  assertOk(treeResponse, "Tree GitHub non leggibile");
+  const treeJson = await treeResponse.json();
+  const markdownFiles = markdownEntriesFromTree(treeJson.tree || []);
+
+  setStatus(`Lettura di ${markdownFiles.length} note Markdown...`);
+  return {
+    files: await fetchMarkdownFiles(markdownFiles, owner, repoName, state.source.branch),
+    mode: "github",
+    truncated: Boolean(treeJson.truncated),
+  };
+}
+
+async function loadBundledVaultFiles() {
+  const response = await fetch("/vault-data.json", { cache: "no-store" });
+  if (!response.ok) return null;
+
+  const snapshot = await response.json();
+  if (!snapshotMatchesSource(snapshot)) return null;
+  const files = Array.isArray(snapshot.files) ? snapshot.files : [];
+  if (files.length === 0) return null;
+  setStatus(`Uso snapshot incluso del vault (${files.length} note)...`);
+
+  return {
+    files,
+    mode: "bundled",
+    truncated: Boolean(snapshot.truncated),
+  };
+}
+
+function snapshotMatchesSource(snapshot) {
+  const source = snapshot?.source || {};
+  const aliases = Array.isArray(source.aliases) ? source.aliases : [];
+  const repos = [source.repo, ...aliases].filter(Boolean).map((repo) => repo.toLowerCase());
+  return (
+    repos.includes(state.source.repo.toLowerCase())
+    && source.branch === state.source.branch
+    && normalizeVaultInput(source.path || "") === state.source.path
+  );
+}
+
+function markdownEntriesFromTree(tree) {
+  const vaultPath = state.source.path;
+  const markdownFiles = tree
+    .filter((entry) => entry.type === "blob")
+    .filter((entry) => entry.path.startsWith(`${vaultPath}/`))
+    .filter((entry) => entry.path.endsWith(".md"))
+    .filter((entry) => !entry.path.includes("/.obsidian/"))
+    .sort((a, b) => a.path.localeCompare(b.path, "it"));
+
+  if (markdownFiles.length === 0) {
+    throw new Error(`Nessun file Markdown trovato in ${vaultPath}`);
+  }
+
+  return markdownFiles;
 }
 
 function parseRepo(repo) {
@@ -284,7 +334,8 @@ function parseRepo(repo) {
 
 function assertOk(response, message) {
   if (!response.ok) {
-    throw new Error(`${message} (${response.status})`);
+    const rateLimited = response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0";
+    throw new Error(rateLimited ? `${message}: limite GitHub API esaurito (403)` : `${message} (${response.status})`);
   }
 }
 

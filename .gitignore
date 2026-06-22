@@ -7,6 +7,7 @@ dist/
 # Log e file di sistema
 npm-debug.log*
 .DS_Store
+public/vault-data.json
 
 # Obsidian: condividiamo la config del vault (knowledge/.obsidian/) ma non lo
 # stato locale dell'interfaccia, che è personale e cambia a ogni sessione.
