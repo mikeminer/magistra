@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Magistra Knowledge Graph</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <canvas id="graph-canvas" aria-label="Grafo 3D del vault Obsidian Magistra"></canvas>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div class="brand-copy">
+            <strong>Magistra Knowledge Graph</strong>
+            <span id="sourceLabel">Italian-Builders-Org/magistra · dev · knowledge</span>
+          </div>
+        </div>
+
+        <form id="sourceForm" class="source-form">
+          <label>
+            <span>Repo</span>
+            <input id="repoInput" name="repo" autocomplete="off" spellcheck="false" />
+          </label>
+          <label>
+            <span>Branch</span>
+            <input id="branchInput" name="branch" autocomplete="off" spellcheck="false" />
+          </label>
+          <label>
+            <span>Vault</span>
+            <input id="pathInput" name="path" autocomplete="off" spellcheck="false" />
+          </label>
+          <button class="icon-button" type="submit" title="Carica vault" aria-label="Carica vault">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+          <a id="githubLink" class="icon-button" href="#" target="_blank" rel="noreferrer" title="Apri su GitHub" aria-label="Apri su GitHub">
+            <i data-lucide="external-link"></i>
+          </a>
+        </form>
+      </header>
+
+      <section class="control-panel" aria-label="Controlli grafo">
+        <label class="search-field">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input id="searchInput" type="search" placeholder="Cerca note, tag, percorsi" autocomplete="off" />
+        </label>
+
+        <div class="control-grid">
+          <label>
+            <span>Area</span>
+            <select id="groupFilter"></select>
+          </label>
+          <label>
+            <span>Intensita</span>
+            <input id="linkStrength" type="range" min="20" max="120" value="64" />
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <label>
+            <input id="showTags" type="checkbox" />
+            <span>Tag</span>
+          </label>
+          <label>
+            <input id="showUnresolved" type="checkbox" checked />
+            <span>Non risolti</span>
+          </label>
+        </div>
+
+        <dl id="statsPanel" class="stats-panel"></dl>
+      </section>
+
+      <section id="detailPanel" class="detail-panel" aria-live="polite"></section>
+
+      <nav class="toolbar" aria-label="Strumenti vista">
+        <button id="resetCamera" class="icon-button" type="button" title="Reimposta camera" aria-label="Reimposta camera">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+        <button id="settleLayout" class="icon-button" type="button" title="Stabilizza layout" aria-label="Stabilizza layout">
+          <i data-lucide="orbit"></i>
+        </button>
+        <button id="focusSelected" class="icon-button" type="button" title="Centra selezione" aria-label="Centra selezione">
+          <i data-lucide="scan-search"></i>
+        </button>
+      </nav>
+
+      <div id="statusBox" class="status-box">Caricamento vault...</div>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

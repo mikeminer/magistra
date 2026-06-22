@@ -88,6 +88,34 @@ La knowledge base del progetto è in [`knowledge/`](knowledge/), strutturata com
 
 La cartella [`knowledge/`](knowledge/) è anche un **vault [Obsidian](https://obsidian.md/)**: aprila come vault per esplorare i concetti e i loro collegamenti nella vista a grafo. La configurazione del vault è versionata in `knowledge/.obsidian/`, così chiunque cloni il repository ottiene la **stessa configurazione** (plugin, aspetto, impostazioni del grafo) senza doverla ricreare.
 
+### Grafo 3D del vault su Vercel
+
+<p align="center">
+  <a href="https://magistra-vault-graph.vercel.app/" target="_blank" rel="noopener noreferrer">
+    <img src="docs/images/obsidian-vault-graph.svg" alt="Apri il grafo 3D del vault Obsidian di Magistra" width="560">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://magistra-vault-graph.vercel.app/" target="_blank" rel="noopener noreferrer"><strong>Apri il vault 3D interattivo</strong></a>
+</p>
+
+Il branch include un viewer statico in [`public/`](public/) pensato per Vercel: legge il vault Obsidian direttamente da GitHub (`Italian-Builders-Org/magistra`, branch `dev`, cartella `knowledge`) e ricostruisce un grafo 3D dei documenti Markdown.
+
+Il parser riconosce link Markdown, wikilink Obsidian (`[[nota]]`, `[[nota|alias]]`), embed (`![[nota]]`), link relativi/root e nodi non risolti. La sorgente puo essere cambiata via query string:
+
+```text
+/?repo=Italian-Builders-Org/magistra&branch=dev&path=knowledge
+```
+
+Per provarlo localmente:
+
+```bash
+npm run dev:graph
+```
+
+Vercel serve la directory `public/` come output statico; l'install command omette le dev dependency pesanti usate solo per validazione e generazione PDF.
+
 Per contribuire: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Community

@@ -12,3 +12,4 @@ npm-debug.log*
 # stato locale dell'interfaccia, che è personale e cambia a ogni sessione.
 knowledge/.obsidian/workspace.json
 knowledge/.obsidian/workspace-mobile.json
+.vercel
