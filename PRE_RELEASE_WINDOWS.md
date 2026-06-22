@@ -1,0 +1,83 @@
+# Magistra per Windows - Pre-release
+
+Magistra e' una app desktop per Windows che porta l'MVP della piattaforma Magistra in una finestra nativa. L'app avvia localmente il servizio web incluso nell'installer e apre l'interfaccia di chat, ricerca normativa e consultazione delle fonti.
+
+Questa pre-release e' pensata per test tecnici, demo controllate e raccolta feedback. Non e' ancora una versione stabile di produzione.
+
+## Download
+
+- Installer Windows: `Magistra-Setup-0.1.0.exe`
+- Architettura: Windows x64
+- Tipo installer: NSIS, installazione guidata con scelta cartella, collegamento Start Menu e collegamento desktop.
+
+## Requisiti di sistema
+
+### Requisiti minimi
+
+- Windows 10 o Windows 11 a 64 bit.
+- CPU x64 moderna.
+- 8 GB di RAM.
+- 1 GB di spazio libero su disco per installazione, cache locale e log.
+- Connessione internet per importare fonti normative online da Normattiva quando non sono presenti nel database locale.
+
+### Requisiti consigliati
+
+- Windows 11 a 64 bit.
+- 16 GB di RAM.
+- SSD con almeno 2 GB liberi.
+- Docker Desktop attivo con il container PostgreSQL/pgvector del progetto.
+- Ollama installato e raggiungibile su `http://127.0.0.1:11434`.
+- Modello locale `llama3.2:latest` disponibile in Ollama, oppure configurazione LLM equivalente.
+
+### Componenti esterni per l'esperienza completa
+
+L'installer include l'app desktop e la build web di Magistra, ma la modalita' completa RAG locale richiede:
+
+- un database PostgreSQL/pgvector locale con la knowledge base normativa;
+- un provider LLM locale o compatibile;
+- accesso internet per recuperare fonti online mancanti.
+
+Se il database locale non e' disponibile, alcune funzioni possono lavorare in modalita' ridotta o non trovare fonti sufficienti. Se il modello LLM non e' raggiungibile, la generazione della risposta puo' fallire.
+
+## Feature incluse
+
+- App desktop Windows con finestra dedicata per Magistra.
+- Avvio automatico del servizio locale incluso nell'app.
+- Chat legale con risposte basate sulle fonti recuperate.
+- Citazioni verificabili con riferimento a fonte, articolo e comma quando disponibili.
+- Ricerca sul database locale prima di qualunque recupero online.
+- Fallback online: quando il database locale non trova fonti, il sistema prova a importare fonti da Normattiva, le salva localmente e rilancia la ricerca.
+- Sintesi LLM: la risposta finale viene generata dal modello LLM usando i testi delle fonti trovate o importate.
+- Supporto a fonti Normattiva con URL/URN ufficiali.
+- Supporto a riferimenti normativi collegati e riferimenti incrociati quando presenti nell'indice.
+- Log locali dell'app desktop per diagnosi di avvio e runtime.
+
+## Come funziona
+
+1. L'utente avvia Magistra dal collegamento desktop o Start Menu.
+2. L'app desktop apre una finestra Windows.
+3. In background viene avviato il servizio web locale su una porta libera di `127.0.0.1`.
+4. La chat interroga prima il database locale.
+5. Se non trova fonti sufficienti, prova il recupero online da Normattiva.
+6. Le fonti recuperate vengono importate e indicizzate.
+7. Il sistema rilancia la ricerca sulle fonti disponibili.
+8. Il LLM genera un sunto citando le fonti usate.
+
+## Note importanti della pre-release
+
+- L'installer non e' ancora firmato digitalmente: Windows SmartScreen potrebbe mostrare un avviso.
+- Magistra e' uno strumento informativo: non fornisce consulenza legale e non sostituisce un professionista abilitato.
+- La qualita' delle risposte dipende dalle fonti presenti nel database, dalla riuscita dell'import online e dal modello LLM configurato.
+- Le funzionalita' di import online richiedono connettivita' verso le fonti ufficiali.
+- La configurazione locale del database e del modello puo' variare tra ambienti di test.
+
+## Troubleshooting rapido
+
+- Se l'app si apre ma non risponde: verificare che non ci siano firewall o antivirus che bloccano il servizio locale su `127.0.0.1`.
+- Se le risposte LLM falliscono: verificare che Ollama sia avviato e che `http://127.0.0.1:11434/v1` sia raggiungibile.
+- Se non vengono trovate fonti: verificare che PostgreSQL/pgvector sia attivo e che il database locale sia popolato.
+- Se l'import online fallisce: verificare la connessione internet e la raggiungibilita' di Normattiva.
+
+## Stato della release
+
+Questa e' una pre-release Windows dell'MVP. L'obiettivo e' validare installazione, avvio desktop, ricerca locale, recupero fonti online e generazione LLM con citazioni.
