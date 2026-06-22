@@ -44,6 +44,7 @@ const state = {
   graph: emptyGraph(),
   view: emptyGraph(),
   selectedId: null,
+  localFocusId: null,
   hoveredId: null,
   search: "",
   group: "all",
@@ -124,6 +125,8 @@ function init() {
 
   groupFilter.addEventListener("change", () => {
     state.group = groupFilter.value;
+    state.selectedId = null;
+    state.localFocusId = null;
     refreshView();
   });
 
@@ -206,6 +209,7 @@ function normalizeVaultInput(value) {
 async function loadVault() {
   try {
     state.selectedId = null;
+    state.localFocusId = null;
     applySourceToInputs();
     setStatus("Caricamento vault da GitHub...");
 
@@ -642,6 +646,34 @@ function makeViewGraph() {
   const includeTags = showTags.checked;
   const includeUnresolved = showUnresolved.checked;
   const nodeById = new Map(state.graph.nodes.map((node) => [node.id, node]));
+
+  if (state.localFocusId && nodeById.has(state.localFocusId)) {
+    const localNodes = new Map();
+    localNodes.set(state.localFocusId, nodeById.get(state.localFocusId));
+
+    for (const link of state.graph.links) {
+      if (link.source !== state.localFocusId && link.target !== state.localFocusId) continue;
+      const otherId = link.source === state.localFocusId ? link.target : link.source;
+      const other = nodeById.get(otherId);
+      if (other && nodeAllowedInView(other, includeTags, includeUnresolved)) {
+        localNodes.set(otherId, other);
+      }
+    }
+
+    const localLinks = state.graph.links.filter((link) => (
+      localNodes.has(link.source) && localNodes.has(link.target)
+    ));
+
+    return {
+      nodes: [...localNodes.values()],
+      links: localLinks,
+      groups: state.graph.groups,
+      source: state.graph.source,
+      truncated: state.graph.truncated,
+      fetchedAt: state.graph.fetchedAt,
+    };
+  }
+
   const visibleNotes = new Set();
 
   for (const node of state.graph.nodes) {
@@ -678,6 +710,12 @@ function makeViewGraph() {
     truncated: state.graph.truncated,
     fetchedAt: state.graph.fetchedAt,
   };
+}
+
+function nodeAllowedInView(node, includeTags, includeUnresolved) {
+  if (node.kind === "tag") return includeTags;
+  if (node.kind === "unresolved") return includeUnresolved;
+  return true;
 }
 
 function buildSceneGraph(graph) {
@@ -757,6 +795,7 @@ function createLines(graph) {
 function updateLines() {
   if (!lineSegments || !linePositions || !lineColors) return;
   const links = lineSegments.userData.links || [];
+  const selectedId = state.selectedId;
   let offset = 0;
   for (const link of links) {
     const source = nodeObjects.get(link.source);
@@ -770,7 +809,11 @@ function updateLines() {
     linePositions[offset + 4] = target.position.y;
     linePositions[offset + 5] = target.position.z;
 
+    const touchesSelected = selectedId && (link.source === selectedId || link.target === selectedId);
     const tone = colorForLink(link);
+    if (selectedId && !touchesSelected) {
+      tone.lerp(new THREE.Color("#24272b"), 0.72);
+    }
     lineColors[offset] = tone.r;
     lineColors[offset + 1] = tone.g;
     lineColors[offset + 2] = tone.b;
@@ -877,6 +920,7 @@ function simulateLayout() {
 function updateMaterials() {
   const matching = new Set();
   const term = state.search;
+  const neighborhood = state.selectedId ? getNeighborhoodIds(state.selectedId, state.view) : new Set();
   if (term) {
     for (const node of state.view.nodes) {
       if (nodeMatches(node, term)) {
@@ -892,10 +936,11 @@ function updateMaterials() {
     const isSelected = node.id === state.selectedId;
     const isHovered = node.id === state.hoveredId;
     const isMatch = !term || matching.has(node.id);
-    const scale = isSelected ? 1.62 : isHovered ? 1.34 : isMatch ? 1 : 0.52;
+    const isConnected = !state.selectedId || neighborhood.has(node.id);
+    const scale = isSelected ? 1.72 : isHovered ? 1.34 : isConnected && isMatch ? 1 : 0.45;
     object.scale.setScalar(scale);
-    material.opacity = isMatch ? 1 : 0.38;
-    material.transparent = !isMatch;
+    material.opacity = isMatch && isConnected ? 1 : 0.22;
+    material.transparent = !(isMatch && isConnected);
     material.emissiveIntensity = isSelected ? 0.52 : isHovered ? 0.38 : node.kind === "note" ? 0.18 : 0.08;
   }
 }
@@ -947,11 +992,15 @@ function moveTooltip(x, y) {
   tooltip.style.top = `${Math.min(window.innerHeight - 90, y + pad)}px`;
 }
 
-function selectNode(id) {
+function selectNode(id, options = {}) {
+  const { local = true, focus = false } = options;
   state.selectedId = id;
-  updateMaterials();
-  updateDetail();
+  state.localFocusId = local ? id : null;
+  refreshView();
   detailPanel.scrollTop = 0;
+  if (focus) {
+    focusNode(id);
+  }
 }
 
 function updateDetail() {
@@ -972,14 +1021,39 @@ function updateDetail() {
   const githubUrl = node.path
     ? `https://github.com/${state.source.repo}/blob/${encodeURIComponent(state.source.branch)}/${node.path}`
     : "";
+  const connections = getNodeConnections(node.id);
+  const connectionsList = connections.length
+    ? `
+      <section class="connections-panel" aria-label="Nodi collegati">
+        <div class="section-title">
+          <span>Collegamenti diretti</span>
+          <code>${connections.length}</code>
+        </div>
+        <div class="connection-list">
+          ${connections.map((connection) => `
+            <button class="connection-item" type="button" data-node-id="${escapeHtml(connection.node.id)}">
+              <span class="connection-dot" style="--dot-color: ${escapeHtml(colorForNode(connection.node))}"></span>
+              <span class="connection-copy">
+                <strong>${escapeHtml(connection.node.title)}</strong>
+                <small>${escapeHtml(connection.node.vaultPath)}</small>
+              </span>
+              <em>${escapeHtml(connection.label)}</em>
+            </button>
+          `).join("")}
+        </div>
+      </section>
+    `
+    : `<p class="muted">Nessun collegamento diretto rilevato per questo nodo.</p>`;
   const fullFile = node.kind === "note" && node.raw
     ? `
       <section class="note-content" aria-label="File Markdown completo">
         <div class="note-content-header">
-          <span>File integrale</span>
+          <span>Contenuto Markdown</span>
           <code>${escapeHtml(node.vaultPath)}</code>
         </div>
-        <pre>${escapeHtml(node.raw)}</pre>
+        <div class="markdown-body">
+          ${renderMarkdown(node.body || node.raw)}
+        </div>
       </section>
     `
     : `<p class="muted">Questo nodo non corrisponde a un file Markdown del vault.</p>`;
@@ -997,11 +1071,244 @@ function updateDetail() {
     </div>
     ${node.tags?.length ? `<div class="tag-list">${node.tags.map((tag) => `<span>#${escapeHtml(tag.replace(/^#/, ""))}</span>`).join("")}</div>` : ""}
     <div class="detail-actions">
+      <button id="toggleNeighborhood" class="text-button" type="button">${state.localFocusId ? "Tutto il grafo" : "Solo collegati"}</button>
       ${githubUrl ? `<a class="text-button" href="${githubUrl}" target="_blank" rel="noreferrer">GitHub</a>` : ""}
       ${node.resource ? `<a class="text-button" href="${escapeHtml(node.resource)}" target="_blank" rel="noreferrer">Risorsa</a>` : ""}
     </div>
+    ${connectionsList}
     ${fullFile}
   `;
+  bindDetailActions(node);
+}
+
+function bindDetailActions(node) {
+  detailPanel.querySelector("#toggleNeighborhood")?.addEventListener("click", () => {
+    state.localFocusId = state.localFocusId ? null : node.id;
+    refreshView();
+    setStatus(state.localFocusId ? `Vista locale: ${node.title}` : "Vista completa del grafo");
+  });
+
+  for (const button of detailPanel.querySelectorAll("[data-node-id]")) {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-node-id");
+      if (id) {
+        selectNode(id, { local: true, focus: true });
+      }
+    });
+  }
+
+  for (const link of detailPanel.querySelectorAll(".markdown-body a")) {
+    link.addEventListener("click", (event) => {
+      const href = link.getAttribute("href") || "";
+      const target = resolveMarkdownHref(href, node);
+      if (target) {
+        event.preventDefault();
+        selectNode(target.id, { local: true, focus: true });
+      } else if (isInternalMarkdownHref(href)) {
+        event.preventDefault();
+        setStatus(`Nodo non trovato: ${href}`, "error");
+      }
+    });
+  }
+}
+
+function getNeighborhoodIds(nodeId, graph) {
+  const ids = new Set([nodeId]);
+  for (const link of graph.links) {
+    if (link.source === nodeId) ids.add(link.target);
+    if (link.target === nodeId) ids.add(link.source);
+  }
+  return ids;
+}
+
+function getNodeConnections(nodeId) {
+  const nodeById = new Map(state.graph.nodes.map((node) => [node.id, node]));
+  const connections = new Map();
+
+  for (const link of state.graph.links) {
+    if (link.source !== nodeId && link.target !== nodeId) continue;
+    const otherId = link.source === nodeId ? link.target : link.source;
+    const node = nodeById.get(otherId);
+    if (!node) continue;
+
+    const direction = link.source === nodeId ? "out" : "in";
+    const key = `${otherId}:${direction}:${link.mode}`;
+    connections.set(key, {
+      node,
+      direction,
+      label: connectionLabel(direction, link.mode),
+    });
+  }
+
+  return [...connections.values()].sort((a, b) => {
+    if (a.direction !== b.direction) return a.direction === "out" ? -1 : 1;
+    return a.node.title.localeCompare(b.node.title, "it");
+  });
+}
+
+function connectionLabel(direction, mode) {
+  if (mode === "tag") return "tag";
+  if (direction === "out") return "link";
+  return "backlink";
+}
+
+function renderMarkdown(markdown) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const html = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    const fence = line.match(/^```(\w+)?\s*$/);
+    if (fence) {
+      const language = fence[1] || "";
+      const code = [];
+      index += 1;
+      while (index < lines.length && !lines[index].startsWith("```")) {
+        code.push(lines[index]);
+        index += 1;
+      }
+      index += index < lines.length ? 1 : 0;
+      html.push(`<pre><code${language ? ` class="language-${escapeAttribute(language)}"` : ""}>${escapeHtml(code.join("\n"))}</code></pre>`);
+      continue;
+    }
+
+    if (isTableStart(lines, index)) {
+      const table = [];
+      table.push(parseTableRow(lines[index]));
+      index += 2;
+      while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+        table.push(parseTableRow(lines[index]));
+        index += 1;
+      }
+      const [head, ...body] = table;
+      html.push(`
+        <table>
+          <thead><tr>${head.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join("")}</tr></thead>
+          <tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table>
+      `);
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      index += 1;
+      continue;
+    }
+
+    if (/^\s*[-*]\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*[-*]\s+/, ""));
+        index += 1;
+      }
+      html.push(`<ul>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+      continue;
+    }
+
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*\d+\.\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*\d+\.\s+/, ""));
+        index += 1;
+      }
+      html.push(`<ol>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ol>`);
+      continue;
+    }
+
+    if (/^>\s?/.test(line)) {
+      const quote = [];
+      while (index < lines.length && /^>\s?/.test(lines[index])) {
+        quote.push(lines[index].replace(/^>\s?/, ""));
+        index += 1;
+      }
+      html.push(`<blockquote>${quote.map(renderInlineMarkdown).join("<br>")}</blockquote>`);
+      continue;
+    }
+
+    const paragraph = [line.trim()];
+    index += 1;
+    while (
+      index < lines.length
+      && lines[index].trim()
+      && !/^(#{1,4})\s+/.test(lines[index])
+      && !/^```/.test(lines[index])
+      && !/^\s*[-*]\s+/.test(lines[index])
+      && !/^\s*\d+\.\s+/.test(lines[index])
+      && !isTableStart(lines, index)
+    ) {
+      paragraph.push(lines[index].trim());
+      index += 1;
+    }
+    html.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+  }
+
+  return html.join("");
+}
+
+function renderInlineMarkdown(value) {
+  let output = escapeHtml(value);
+  output = output.replace(/`([^`]+)`/g, "<code>$1</code>");
+  output = output.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  output = output.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  output = output.replace(/\[([^\]]+)]\(([^)]+)\)/g, (_match, label, href) => {
+    const cleanHref = href.trim();
+    const external = isExternalTarget(cleanHref);
+    return `<a href="${escapeAttribute(cleanHref)}"${external ? ' target="_blank" rel="noreferrer"' : ""}>${label}</a>`;
+  });
+  output = output.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?]]/g, (_match, target, label) => {
+    const href = target.trim();
+    return `<a href="${escapeAttribute(href)}">${label || href}</a>`;
+  });
+  return output;
+}
+
+function isTableStart(lines, index) {
+  return (
+    index + 1 < lines.length
+    && lines[index].includes("|")
+    && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[index + 1])
+  );
+}
+
+function parseTableRow(line) {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function resolveMarkdownHref(href, sourceNode) {
+  if (!href || !isInternalMarkdownHref(href)) return null;
+  const clean = cleanTarget(href.split("#")[0]);
+  if (!clean) return null;
+  const candidates = candidatePaths(clean, sourceNode.id, "markdown");
+  const normalizedIds = new Set(candidates.map((candidate) => `/${normalizeVaultPath(candidate)}`.replace(/\/+$/, "")));
+
+  return state.graph.nodes.find((node) => (
+    node.kind === "note"
+    && (
+      normalizedIds.has(node.id)
+      || normalizedIds.has(node.id.replace(/\.md$/i, ""))
+      || node.vaultPath === clean
+      || node.vaultPath.replace(/\.md$/i, "") === clean.replace(/\.md$/i, "")
+    )
+  )) || null;
+}
+
+function isInternalMarkdownHref(href) {
+  return Boolean(href) && !isExternalTarget(href) && !href.startsWith("#");
 }
 
 function updateStats() {
@@ -1069,6 +1376,10 @@ function escapeHtml(value) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/'/g, "&#39;");
 }
 
 window.addEventListener("beforeunload", () => {
