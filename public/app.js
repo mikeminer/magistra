@@ -806,6 +806,9 @@ function updateLines() {
   if (!lineSegments || !linePositions || !lineColors) return;
   const links = lineSegments.userData.links || [];
   const selectedId = state.selectedId;
+  const matching = getMatchingNodeIds();
+  const hasSearch = Boolean(state.search);
+  lineSegments.material.opacity = hasSearch ? 0.54 : 0.42;
   let offset = 0;
   for (const link of links) {
     const source = nodeObjects.get(link.source);
@@ -820,9 +823,16 @@ function updateLines() {
     linePositions[offset + 5] = target.position.z;
 
     const touchesSelected = selectedId && (link.source === selectedId || link.target === selectedId);
+    const touchesSearchMatch = hasSearch && (matching.has(link.source) || matching.has(link.target));
     const tone = colorForLink(link);
+    if (touchesSearchMatch) {
+      tone.lerp(new THREE.Color("#f3f1ea"), 0.24);
+    }
     if (selectedId && !touchesSelected) {
       tone.lerp(new THREE.Color("#24272b"), 0.72);
+    }
+    if (hasSearch && !touchesSearchMatch) {
+      tone.lerp(new THREE.Color("#151719"), 0.88);
     }
     lineColors[offset] = tone.r;
     lineColors[offset + 1] = tone.g;
@@ -929,16 +939,10 @@ function simulateLayout() {
 }
 
 function updateMaterials() {
-  const matching = new Set();
   const term = state.search;
+  const matching = getMatchingNodeIds(term);
+  const hasSearch = Boolean(term);
   const neighborhood = state.selectedId ? getNeighborhoodIds(state.selectedId, state.view) : new Set();
-  if (term) {
-    for (const node of state.view.nodes) {
-      if (nodeMatches(node, term)) {
-        matching.add(node.id);
-      }
-    }
-  }
 
   for (const node of state.view.nodes) {
     const object = nodeObjects.get(node.id);
@@ -946,13 +950,15 @@ function updateMaterials() {
     if (!object || !material) continue;
     const isSelected = node.id === state.selectedId;
     const isHovered = node.id === state.hoveredId;
-    const isMatch = !term || matching.has(node.id);
+    const isSearchMatch = hasSearch && matching.has(node.id);
+    const isMatch = !hasSearch || isSearchMatch;
     const isConnected = !state.selectedId || neighborhood.has(node.id);
-    const scale = isSelected ? 1.72 : isHovered ? 1.34 : isConnected && isMatch ? 1 : 0.45;
+    const scale = isSelected ? 1.82 : isHovered ? 1.42 : isSearchMatch ? 1.58 : isConnected && isMatch ? 1 : 0.34;
+    const visible = isMatch && isConnected;
     object.scale.setScalar(scale);
-    material.opacity = isMatch && isConnected ? 1 : 0.22;
-    material.transparent = !(isMatch && isConnected);
-    material.emissiveIntensity = isSelected ? 0.52 : isHovered ? 0.38 : node.kind === "note" ? 0.18 : 0.08;
+    material.opacity = visible ? 1 : hasSearch ? 0.08 : 0.22;
+    material.transparent = !visible;
+    material.emissiveIntensity = isSelected ? 0.62 : isHovered ? 0.42 : isSearchMatch ? 0.76 : node.kind === "note" ? 0.18 : 0.08;
   }
   updateLabels();
 }
@@ -960,14 +966,8 @@ function updateMaterials() {
 function updateLabels() {
   const rect = canvas.getBoundingClientRect();
   const term = state.search;
-  const matching = new Set();
+  const matching = getMatchingNodeIds(term);
   const neighborhood = state.selectedId ? getNeighborhoodIds(state.selectedId, state.view) : null;
-
-  if (term) {
-    for (const node of state.view.nodes) {
-      if (nodeMatches(node, term)) matching.add(node.id);
-    }
-  }
 
   for (const node of state.view.nodes) {
     const object = nodeObjects.get(node.id);
@@ -986,7 +986,18 @@ function updateLabels() {
     label.dataset.selected = node.id === state.selectedId ? "true" : "false";
     label.dataset.connected = !neighborhood || neighborhood.has(node.id) ? "true" : "false";
     label.dataset.match = !term || matching.has(node.id) ? "true" : "false";
+    label.dataset.searching = term ? "true" : "false";
   }
+}
+
+function getMatchingNodeIds(term = state.search, graph = state.view) {
+  const normalized = term.trim().toLowerCase();
+  if (!normalized) return new Set();
+  const ids = new Set();
+  for (const node of graph.nodes) {
+    if (nodeMatches(node, normalized)) ids.add(node.id);
+  }
+  return ids;
 }
 
 function nodeMatches(node, term) {

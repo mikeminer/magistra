@@ -96,12 +96,20 @@ select {
   font-weight: 700;
 }
 
+.graph-label[data-searching="true"][data-match="true"] {
+  border-color: rgba(239, 198, 90, 0.82);
+  background: rgba(45, 38, 19, 0.94);
+  color: #fff5cc;
+  box-shadow: 0 0 18px rgba(239, 198, 90, 0.24);
+  font-weight: 700;
+}
+
 .graph-label[data-connected="false"] {
   opacity: 0.28;
 }
 
 .graph-label[data-match="false"] {
-  opacity: 0.18;
+  opacity: 0.16;
 }
 
 .topbar,
