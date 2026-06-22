@@ -52,6 +52,58 @@ select {
   display: block;
 }
 
+#label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.graph-label {
+  position: absolute;
+  max-width: 170px;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(13, 15, 16, 0.72);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.72);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+.graph-label[data-kind="tag"] {
+  color: #f0d88d;
+}
+
+.graph-label[data-kind="unresolved"] {
+  color: var(--muted);
+}
+
+.graph-label[data-selected="true"] {
+  border-color: rgba(98, 217, 168, 0.72);
+  background: rgba(20, 28, 25, 0.94);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.graph-label[data-connected="false"] {
+  opacity: 0.28;
+}
+
+.graph-label[data-match="false"] {
+  opacity: 0.18;
+}
+
 .topbar,
 .control-panel,
 .detail-panel,

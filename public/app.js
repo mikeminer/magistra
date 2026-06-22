@@ -20,6 +20,7 @@ const GROUP_COLORS = new Map([
 ]);
 
 const canvas = document.querySelector("#graph-canvas");
+const labelLayer = document.querySelector("#label-layer");
 const sourceForm = document.querySelector("#sourceForm");
 const repoInput = document.querySelector("#repoInput");
 const branchInput = document.querySelector("#branchInput");
@@ -91,6 +92,7 @@ scene.add(rimLight);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const nodeObjects = new Map();
+const nodeLabels = new Map();
 const nodeMaterials = new Map();
 const velocities = new Map();
 let lineSegments = null;
@@ -725,7 +727,9 @@ function buildSceneGraph(graph) {
   }
   graphRoot.clear();
   nodeObjects.clear();
+  nodeLabels.clear();
   nodeMaterials.clear();
+  labelLayer.replaceChildren();
   lineSegments = null;
   linePositions = null;
   lineColors = null;
@@ -747,6 +751,13 @@ function buildSceneGraph(graph) {
     nodeObjects.set(node.id, mesh);
     nodeMaterials.set(node.id, material);
     velocities.set(node.id, velocities.get(node.id) || { x: 0, y: 0, z: 0 });
+
+    const label = document.createElement("span");
+    label.className = "graph-label";
+    label.textContent = node.title;
+    label.dataset.kind = node.kind;
+    labelLayer.append(label);
+    nodeLabels.set(node.id, label);
   }
 
   createLines(graph);
@@ -841,6 +852,7 @@ function animate() {
   }
   controls.update();
   updateLines();
+  updateLabels();
   renderer.render(scene, camera);
 }
 
@@ -942,6 +954,39 @@ function updateMaterials() {
     material.opacity = isMatch && isConnected ? 1 : 0.22;
     material.transparent = !(isMatch && isConnected);
     material.emissiveIntensity = isSelected ? 0.52 : isHovered ? 0.38 : node.kind === "note" ? 0.18 : 0.08;
+  }
+  updateLabels();
+}
+
+function updateLabels() {
+  const rect = canvas.getBoundingClientRect();
+  const term = state.search;
+  const matching = new Set();
+  const neighborhood = state.selectedId ? getNeighborhoodIds(state.selectedId, state.view) : null;
+
+  if (term) {
+    for (const node of state.view.nodes) {
+      if (nodeMatches(node, term)) matching.add(node.id);
+    }
+  }
+
+  for (const node of state.view.nodes) {
+    const object = nodeObjects.get(node.id);
+    const label = nodeLabels.get(node.id);
+    if (!object || !label) continue;
+
+    const vector = object.position.clone().project(camera);
+    const x = (vector.x * 0.5 + 0.5) * rect.width;
+    const y = (-vector.y * 0.5 + 0.5) * rect.height;
+    const isVisible = vector.z >= -1 && vector.z <= 1 && x > -90 && x < rect.width + 90 && y > -28 && y < rect.height + 28;
+
+    label.hidden = !isVisible;
+    if (!isVisible) continue;
+
+    label.style.transform = `translate(${Math.round(x + rect.left + 10)}px, ${Math.round(y + rect.top - 10)}px)`;
+    label.dataset.selected = node.id === state.selectedId ? "true" : "false";
+    label.dataset.connected = !neighborhood || neighborhood.has(node.id) ? "true" : "false";
+    label.dataset.match = !term || matching.has(node.id) ? "true" : "false";
   }
 }
 
