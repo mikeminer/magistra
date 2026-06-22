@@ -1,1 +1,14 @@
-.gitnexus
+# Dipendenze
+node_modules/
+
+# Artefatti di build (PDF generato dalla knowledge base)
+dist/
+
+# Log e file di sistema
+npm-debug.log*
+.DS_Store
+
+# Obsidian: condividiamo la config del vault (knowledge/.obsidian/) ma non lo
+# stato locale dell'interfaccia, che è personale e cambia a ogni sessione.
+knowledge/.obsidian/workspace.json
+knowledge/.obsidian/workspace-mobile.json
