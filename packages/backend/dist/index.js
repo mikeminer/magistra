@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { PostgresDocumentRepository, PostgresLegalRepository, PostgresReviewRepository, contaSnapshotDatabase, creaSnapshotDatabase } from "../../database/dist/index.js";
 import { createCitationLabel } from "../../domain/dist/index.js";
 import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "../../ingest/dist/index.js";
-import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv, similaritaCoseno } from "../../llm/dist/index.js";
+import { GeneratoreRispostaStub, creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv, similaritaCoseno } from "../../llm/dist/index.js";
 import { getCorpusDimostrativo, rispondiConFontiRag } from "../../retrieval/dist/index.js";
 import { CassazionePenaleAdapter, NormattivaAdapter, scaricaAttoNormattivaOpenData, scaricaSchedeCassazionePenale } from "../../sources/dist/index.js";
 import { creaDatabaseDaEnv, databaseConfigurato, isPgliteDatabase } from "../../worker/dist/status.js";
@@ -90,7 +90,7 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
         }));
         const riferimentiNormativi = deduplicaRiferimentiNormativi(fontiRecuperate.flatMap((fonte) => fonte.riferimentiNormativi ?? []));
         const scenarioPenale = creaScenarioPenale(domanda, profiloDomanda, fontiRecuperate);
-        const generata = await generatore.genera({
+        const generata = await generaRispostaConFallback(generatore, {
             domanda: creaDomandaPerGenerazione(domanda, profiloDomanda),
             fonti: fontiRecuperate.map((fonte) => ({
                 eli: fonte.eli,
@@ -119,7 +119,8 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
                 recuperoFontiOnline,
                 retrieval: "ibrido",
                 richiedeRevisioneUmana: richiedeRevisioneUmana(domanda),
-                scenarioPenale
+                scenarioPenale,
+                fallbackLlm: generata.fallbackLlm
             },
             modalita: "rag-locale",
             riferimentiNormativi,
@@ -542,7 +543,7 @@ limit 5`));
         });
         const fontiRecuperate = [...fontiPerId.values()];
         const riferimentiNormativi = deduplicaRiferimentiNormativi(fontiRecuperate.flatMap((fonte) => fonte.riferimentiNormativi ?? []));
-        const generata = await generatore.genera({
+        const generata = await generaRispostaConFallback(generatore, {
             domanda,
             fonti: fontiRecuperate.map((fonte) => ({
                 eli: fonte.eli,
@@ -567,7 +568,8 @@ limit 5`));
                 modelloRisposta: generata.modello,
                 providerEmbedding: embeddingProvider.nome,
                 retrieval: "ibrido",
-                richiedeRevisioneUmana: false
+                richiedeRevisioneUmana: false,
+                fallbackLlm: generata.fallbackLlm
             },
             modalita: "rag-locale",
             riferimentiNormativi,
@@ -580,6 +582,30 @@ limit 5`));
             return null;
         }
         throw error;
+    }
+}
+async function generaRispostaConFallback(generatore, richiesta) {
+    try {
+        return {
+            ...(await generatore.genera(richiesta)),
+            fallbackLlm: {
+                attivo: false,
+                providerPrimario: generatore.nome
+            }
+        };
+    }
+    catch (error) {
+        const fallback = new GeneratoreRispostaStub();
+        const generata = await fallback.genera(richiesta);
+        return {
+            ...generata,
+            fallbackLlm: {
+                attivo: true,
+                errore: error instanceof Error ? error.message : String(error),
+                providerFallback: fallback.nome,
+                providerPrimario: generatore.nome
+            }
+        };
     }
 }
 function testoFonteConRiferimenti(fonte) {
