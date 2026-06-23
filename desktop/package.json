@@ -6,6 +6,7 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
+    "snapshot:create": "node create-corpus-snapshot.cjs",
     "dist:win": "electron-builder --win nsis --x64"
   },
   "devDependencies": {
@@ -60,6 +61,24 @@
       {
         "from": "../certs",
         "to": "magistra-runtime/certs",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "schema.sql",
+        "to": "magistra-runtime/schema.sql"
+      },
+      {
+        "from": "snapshots",
+        "to": "magistra-runtime/snapshots",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "postgres",
+        "to": "magistra-runtime/postgres",
         "filter": [
           "**/*"
         ]

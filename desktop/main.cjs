@@ -1,4 +1,5 @@
 const { app, BrowserWindow, dialog, shell } = require("electron");
+const { createHash } = require("node:crypto");
 const { execFileSync, spawn } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -7,8 +8,13 @@ const path = require("node:path");
 
 const APP_NAME = "Magistra";
 const DOCKER_POSTGRES_CONTAINER = "italian-oss-legal-platform-postgres-1";
+const DESKTOP_DB_NAME = "magistra";
+const DESKTOP_DB_USER = "magistra";
+const DESKTOP_SNAPSHOT_NAME = "magistra-corpus.sql";
 let serverProcess;
+let workerProcess;
 let mainWindow;
+let portablePostgres;
 
 function logDir() {
   const dir = path.join(app.getPath("userData"), "logs");
@@ -44,6 +50,220 @@ function readEnvFile(filePath) {
     output[match[1]] = match[2].replace(/^["']|["']$/g, "");
   }
   return output;
+}
+
+function firstExistingPath(candidates) {
+  return candidates.find((candidate) => candidate && fs.existsSync(candidate));
+}
+
+function executableName(name) {
+  return process.platform === "win32" ? `${name}.exe` : name;
+}
+
+function resolvePostgresTools(root, env) {
+  const configuredBin = env.MAGISTRA_POSTGRES_BIN || process.env.MAGISTRA_POSTGRES_BIN;
+  const candidates = [
+    configuredBin,
+    path.join(root, "postgres", "bin"),
+    path.join(root, "postgresql", "bin"),
+    path.join(root, "runtime", "postgres", "bin")
+  ].filter(Boolean);
+  for (const binDir of candidates) {
+    const pgCtl = path.join(binDir, executableName("pg_ctl"));
+    const initdb = path.join(binDir, executableName("initdb"));
+    const createdb = path.join(binDir, executableName("createdb"));
+    const psql = path.join(binDir, executableName("psql"));
+    if (fs.existsSync(pgCtl) && fs.existsSync(initdb) && fs.existsSync(psql)) {
+      return { binDir, createdb, initdb, pgCtl, psql };
+    }
+  }
+  return undefined;
+}
+
+function runPostgresTool(logName, file, args, options = {}) {
+  appendLog(logName, `exec ${file} ${args.join(" ")}`);
+  return execFileSync(file, args, {
+    encoding: "utf8",
+    stdio: options.stdio ?? "pipe",
+    timeout: options.timeout ?? 120000,
+    windowsHide: true
+  });
+}
+
+function schemaPath(root) {
+  return firstExistingPath([
+    path.join(root, "schema.sql"),
+    path.join(root, "desktop", "schema.sql")
+  ]);
+}
+
+function snapshotPath(root, env) {
+  const configured = env.MAGISTRA_CORPUS_SNAPSHOT || process.env.MAGISTRA_CORPUS_SNAPSHOT;
+  return firstExistingPath([
+    configured,
+    path.join(root, "snapshots", DESKTOP_SNAPSHOT_NAME),
+    path.join(root, "desktop", "snapshots", DESKTOP_SNAPSHOT_NAME)
+  ]);
+}
+
+function hashFile(filePath) {
+  const hash = createHash("sha256");
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest("hex");
+}
+
+function psqlArgs(connection, extraArgs) {
+  return [
+    "-h",
+    "127.0.0.1",
+    "-p",
+    String(connection.port),
+    "-U",
+    connection.user,
+    "-d",
+    connection.database,
+    ...extraArgs
+  ];
+}
+
+function applyDesktopSchema(root, tools, connection) {
+  const filePath = schemaPath(root);
+  if (!filePath) {
+    appendLog("postgres.log", "schema.sql non trovato: salto bootstrap schema");
+    return;
+  }
+  runPostgresTool("postgres.log", tools.psql, psqlArgs(connection, [
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-f",
+    filePath
+  ]), { timeout: 180000 });
+}
+
+function restoreBundledSnapshot(root, tools, connection, env) {
+  const filePath = snapshotPath(root, env);
+  if (!filePath) {
+    appendLog("postgres.log", "snapshot corpus non trovato: avvio senza restore snapshot");
+    return false;
+  }
+  const digest = hashFile(filePath);
+  const marker = path.join(app.getPath("userData"), `snapshot-${digest}.restored`);
+  if (fs.existsSync(marker)) {
+    appendLog("postgres.log", `snapshot gia' ripristinato: ${path.basename(filePath)}`);
+    return false;
+  }
+  runPostgresTool("postgres.log", tools.psql, psqlArgs(connection, [
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-f",
+    filePath
+  ]), { timeout: 900000 });
+  fs.writeFileSync(marker, new Date().toISOString(), "utf8");
+  appendLog("postgres.log", `snapshot ripristinato: ${filePath}`);
+  return true;
+}
+
+function countLocalChunks(tools, connection) {
+  try {
+    const output = runPostgresTool("postgres.log", tools.psql, psqlArgs(connection, [
+      "-At",
+      "-c",
+      "select count(*) from chunk_normativi"
+    ]), { timeout: 30000 });
+    return Number(output.trim());
+  }
+  catch (error) {
+    appendLog("postgres.log", `conteggio chunk non disponibile: ${error.message}`);
+    return 0;
+  }
+}
+
+async function startPortablePostgres(root, env) {
+  if ((env.MAGISTRA_DESKTOP_DB_MODE || process.env.MAGISTRA_DESKTOP_DB_MODE) === "external") {
+    return undefined;
+  }
+  const tools = resolvePostgresTools(root, env);
+  if (!tools) {
+    appendLog("postgres.log", "runtime PostgreSQL portabile non trovato");
+    return undefined;
+  }
+  const dataDir = env.MAGISTRA_POSTGRES_DATA_DIR ||
+    process.env.MAGISTRA_POSTGRES_DATA_DIR ||
+    path.join(app.getPath("userData"), "postgres-data");
+  fs.mkdirSync(path.dirname(dataDir), { recursive: true });
+  const initialized = fs.existsSync(path.join(dataDir, "PG_VERSION"));
+  if (!initialized) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    runPostgresTool("postgres.log", tools.initdb, [
+      "-D",
+      dataDir,
+      "-U",
+      DESKTOP_DB_USER,
+      "-A",
+      "trust",
+      "-E",
+      "UTF8"
+    ], { timeout: 180000 });
+  }
+  const port = Number(env.MAGISTRA_POSTGRES_PORT || process.env.MAGISTRA_POSTGRES_PORT) ||
+    await findFreePort();
+  runPostgresTool("postgres.log", tools.pgCtl, [
+    "-D",
+    dataDir,
+    "-o",
+    `-p ${port} -h 127.0.0.1`,
+    "-w",
+    "start"
+  ], { timeout: 180000 });
+  portablePostgres = { dataDir, pgCtl: tools.pgCtl };
+  try {
+    runPostgresTool("postgres.log", tools.createdb, [
+      "-h",
+      "127.0.0.1",
+      "-p",
+      String(port),
+      "-U",
+      DESKTOP_DB_USER,
+      DESKTOP_DB_NAME
+    ], { timeout: 60000 });
+  }
+  catch (error) {
+    appendLog("postgres.log", `createdb saltato: ${error.message}`);
+  }
+  const connection = {
+    database: DESKTOP_DB_NAME,
+    port,
+    user: DESKTOP_DB_USER
+  };
+  applyDesktopSchema(root, tools, connection);
+  const restoredSnapshot = restoreBundledSnapshot(root, tools, connection, env);
+  const chunkCount = countLocalChunks(tools, connection);
+  return {
+    chunkCount,
+    connection,
+    databaseUrl: `postgresql://${DESKTOP_DB_USER}@127.0.0.1:${port}/${DESKTOP_DB_NAME}`,
+    restoredSnapshot,
+    tools
+  };
+}
+
+function stopPortablePostgres() {
+  if (!portablePostgres) {
+    return;
+  }
+  try {
+    runPostgresTool("postgres.log", portablePostgres.pgCtl, [
+      "-D",
+      portablePostgres.dataDir,
+      "-m",
+      "fast",
+      "-w",
+      "stop"
+    ], { timeout: 60000 });
+  }
+  catch (error) {
+    appendLog("postgres.log", `stop PostgreSQL fallito: ${error.message}`);
+  }
 }
 
 function detectDockerDatabaseUrl() {
@@ -123,11 +343,14 @@ function waitForHttp(url, timeoutMs = 90000) {
   });
 }
 
-function buildServerEnv(root, port) {
+async function buildServerEnv(root, port) {
   const fileEnv = readEnvFile(path.join(root, ".env"));
   const storageDir = path.join(app.getPath("userData"), "storage");
   fs.mkdirSync(storageDir, { recursive: true });
   const certPath = path.join(root, "certs", "local-ca.pem");
+  const portableDatabase = !process.env.DATABASE_URL && !fileEnv.DATABASE_URL
+    ? await startPortablePostgres(root, fileEnv)
+    : undefined;
   const env = {
     ...process.env,
     ...fileEnv,
@@ -145,16 +368,67 @@ function buildServerEnv(root, port) {
     LLM_MAX_OUTPUT_TOKENS: fileEnv.LLM_MAX_OUTPUT_TOKENS || process.env.LLM_MAX_OUTPUT_TOKENS || "700",
     NODE_PATH: path.join(root, "node_modules")
   };
+  if (portableDatabase?.databaseUrl) {
+    env.DATABASE_URL = portableDatabase.databaseUrl;
+    env.MAGISTRA_DESKTOP_DB_KIND = "portable-postgres";
+    env.MAGISTRA_DESKTOP_DB_CHUNKS = String(portableDatabase.chunkCount);
+  }
   if (!env.DATABASE_URL) {
     const detected = detectDockerDatabaseUrl();
     if (detected) {
       env.DATABASE_URL = detected;
+      env.MAGISTRA_DESKTOP_DB_KIND = "docker-postgres";
     }
   }
   if (fs.existsSync(certPath)) {
     env.NODE_EXTRA_CA_CERTS = certPath;
   }
+  env.MAGISTRA_DESKTOP_NEEDS_BOOTSTRAP_INGEST =
+    portableDatabase && portableDatabase.chunkCount === 0 && !portableDatabase.restoredSnapshot
+      ? "true"
+      : "false";
   return env;
+}
+
+function startDesktopWorker(root, env) {
+  if (env.DESKTOP_WORKER_ENABLED === "false" || !env.DATABASE_URL) {
+    return;
+  }
+  const workerCli = path.join(root, "packages", "worker", "dist", "cli.js");
+  if (!fs.existsSync(workerCli)) {
+    appendLog("worker.log", `worker CLI non trovato: ${workerCli}`);
+    return;
+  }
+  const shouldBootstrap = env.MAGISTRA_DESKTOP_NEEDS_BOOTSTRAP_INGEST === "true" &&
+    env.DESKTOP_WORKER_BOOTSTRAP_ON_EMPTY !== "false";
+  const scheduleEnabled = env.DESKTOP_WORKER_SCHEDULE_ENABLED === "true";
+  if (!shouldBootstrap && !scheduleEnabled) {
+    appendLog("worker.log", "worker non avviato: nessun bootstrap o schedule richiesto");
+    return;
+  }
+  const command = shouldBootstrap ? "ingest-once" : "schedule";
+  const workerEnv = {
+    ...env,
+    WORKER_IMPORT_DATABASE: env.WORKER_IMPORT_DATABASE || "true",
+    WORKER_MIGRATE_BEFORE_INGEST: env.WORKER_MIGRATE_BEFORE_INGEST || "false",
+    WORKER_RUN_ONCE: shouldBootstrap ? "true" : env.WORKER_RUN_ONCE
+  };
+  appendLog("worker.log", `starting worker command=${command}`);
+  workerProcess = spawn(process.execPath, [
+    workerCli,
+    command
+  ], {
+    cwd: root,
+    env: workerEnv,
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  workerProcess.stdout.on("data", (chunk) => appendLog("worker.out.log", chunk.toString()));
+  workerProcess.stderr.on("data", (chunk) => appendLog("worker.err.log", chunk.toString()));
+  workerProcess.once("exit", (code) => {
+    appendLog("worker.log", `worker exited code=${code ?? "unknown"}`);
+    workerProcess = undefined;
+  });
 }
 
 async function startNextServer() {
@@ -165,7 +439,7 @@ async function startNextServer() {
     throw new Error(`Build web non trovata: ${nextBin}`);
   }
   const port = await findFreePort();
-  const env = buildServerEnv(root, port);
+  const env = await buildServerEnv(root, port);
   const url = `http://127.0.0.1:${port}`;
   fs.writeFileSync(logFilePath("server-url.txt"), url, "utf8");
   appendLog("main.log", `starting Next at ${url}`);
@@ -190,6 +464,7 @@ async function startNextServer() {
       dialog.showErrorBox(APP_NAME, `Il server locale si e' chiuso con codice ${code ?? "sconosciuto"}.`);
     }
   });
+  startDesktopWorker(root, env);
   await waitForHttp(`${url}/api/health`);
   return url;
 }
@@ -247,9 +522,13 @@ app.whenReady().then(async () => {
 });
 
 app.on("before-quit", () => {
+  if (workerProcess && !workerProcess.killed) {
+    workerProcess.kill();
+  }
   if (serverProcess && !serverProcess.killed) {
     serverProcess.kill();
   }
+  stopPortablePostgres();
 });
 
 app.on("window-all-closed", () => {
