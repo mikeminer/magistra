@@ -19,22 +19,22 @@ flowchart TD
     FE["Frontend<br/>(React / Next.js / TypeScript)"]
     BE["API / RAG runtime<br/>(TypeScript)"]
     Worker["Worker / job runtime<br/>(TypeScript)<br/>ingest, import, update"]
-    VDB[("PostgreSQL + pgvector<br/>corpus + dati applicativi")]
+    DB[("Database runtime<br/>PostgreSQL + pgvector / PGlite<br/>corpus + dati applicativi")]
     OS[("Object storage<br/>MinIO, S3-compat.<br/>documenti utente")]
     Snapshot[/"DB snapshot<br/>corpus pre-ingestato"/]
-    Fonti["Fonti online<br/>Normattiva, GU, EUR-Lex"]
+    Fonti["Fonti online<br/>Normattiva, GU, EUR-Lex, Cassazione"]
     LLM["LLM<br/>provider configurabile"]
 
     Utente --> Desktop
     Utente --> FE
     Desktop --> FE
     FE -->|API| BE
-    BE --> VDB
+    BE --> DB
     BE --> OS
     BE -. job .-> Worker
-    Worker --> VDB
+    Worker --> DB
     Fonti --> Worker
-    Snapshot -. inizializza / aggiorna .-> VDB
+    Snapshot -. inizializza / aggiorna .-> DB
     BE --> LLM
     LLM -->|risposte con citazioni| FE
 ```

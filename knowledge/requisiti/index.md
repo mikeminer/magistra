@@ -15,6 +15,7 @@ Insieme alle [funzionalità](/funzionalita/index.md) è la base del documento di
 
 - [Ambito MVP](/requisiti/mvp.md) — cosa entra nella prima release e cosa no.
 - [Roadmap](/requisiti/roadmap.md) — le fasi successive all'MVP.
+- [Feedback avvocati beta](/requisiti/feedback-avvocati-beta.md) — segnali di prodotto da avvocati tester e priorità Windows/penale.
 
 ## Qualità e vincoli
 

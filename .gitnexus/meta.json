@@ -1,14 +1,14 @@
 {
   "repoPath": "C:\\Users\\mikfo\\Documents\\Italian-OSS-Legal-Platform",
-  "lastCommit": "5a1777d4eba63c5c05c1b2de9aed797d12b2cd42",
-  "indexedAt": "2026-06-23T07:57:39.229Z",
+  "lastCommit": "e566fbed972193fb288f515f62e756b29eb0beba",
+  "indexedAt": "2026-06-23T17:46:15.074Z",
   "remoteUrl": "https://github.com/mikeminer/magistra",
   "stats": {
     "files": 133,
-    "nodes": 595,
-    "edges": 875,
-    "communities": 16,
-    "processes": 32,
+    "nodes": 632,
+    "edges": 969,
+    "communities": 18,
+    "processes": 40,
     "embeddings": 0
   }
 }

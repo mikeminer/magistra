@@ -22,6 +22,9 @@ Termini giuridici e tecnici ricorrenti nel progetto Magistra. Ogni termine è un
 - [Rubrica](/glossario/rubrica.md)
 - [Recepimento](/glossario/recepimento.md)
 - [Giurisprudenza](/glossario/giurisprudenza.md)
+- [Fattispecie](/glossario/fattispecie.md)
+- [Strategia difensiva](/glossario/strategia-difensiva.md)
+- [Orientamento giurisprudenziale](/glossario/orientamento-giurisprudenziale.md)
 - [GDPR](/glossario/gdpr.md)
 
 ## Standard e formati

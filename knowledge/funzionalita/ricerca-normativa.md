@@ -12,13 +12,14 @@ Permette di trovare norme e singole [unità](/modello-dati/unita.md) (articoli, 
 
 ## Modalità
 
+- **Per [fattispecie](/glossario/fattispecie.md)**: dalla descrizione dei fatti alle norme e agli istituti candidati, anche senza articolo citato.
 - **[Ricerca semantica](/glossario/ricerca-semantica.md)**: per concetto, basata sugli [embedding](/glossario/embedding.md) dei [chunk](/modello-dati/chunk.md).
 - **Per parola chiave**: ricerca lessicale classica, utile per termini e numeri di articolo esatti.
 - **Ibrida**: combinazione delle due, con [reranking](/glossario/reranking.md) dei risultati.
 
 ## Pianificazione delle query
 
-Anche nella ricerca diretta la query dell'utente non viene embeddata grezza: passa per la stessa [pianificazione delle query](/architettura/pianificazione-query.md) agentica usata dall'[assistente](/funzionalita/assistente-legale.md). Il sistema **riformula** la richiesta in una o più query di ricerca mirate (sinonimi, terminologia giuridica, sotto-ricerche), le embedda e ne unisce i risultati con [reranking](/glossario/reranking.md).
+Anche nella ricerca diretta la query dell'utente non viene embeddata grezza: passa per la stessa [pianificazione delle query](/architettura/pianificazione-query.md) agentica usata dall'[assistente](/funzionalita/assistente-legale.md). Il sistema **riformula** la richiesta in una o più query di ricerca mirate (sinonimi, terminologia giuridica, sotto-ricerche), le embedda e ne unisce i risultati con [reranking](/glossario/reranking.md). Quando la domanda descrive un caso concreto, la pianificazione produce anche un frame di [ricerca per fattispecie](/funzionalita/ricerca-per-fattispecie.md).
 
 Vale per la modalità semantica e ibrida; la ricerca per sola parola chiave resta letterale.
 

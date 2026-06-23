@@ -22,6 +22,7 @@ Sequenza proposta di fasi, dalla knowledge base verso il prodotto. Ogni fase è 
 - Le funzionalità elencate in [Ambito MVP](/requisiti/mvp.md).
 - [Pipeline di ingest](/modello-dati/pipeline-trasformazione.md) su un sottoinsieme del corpus.
 - [Valutazione della qualità](/requisiti/valutazione-qualita.md) di base.
+- Primo verticale penalistico: [ricerca per fattispecie](/funzionalita/ricerca-per-fattispecie.md), [ragionamento strategico difensivo](/funzionalita/ragionamento-strategico.md) e [Cassazione penale](/fonti/cassazione-penale.md) come fonte prioritaria.
 
 ## Fase 2 — Lavoro sui documenti
 
@@ -31,6 +32,6 @@ Sequenza proposta di fasi, dalla knowledge base verso il prodotto. Ogni fase è 
 
 - [Revisione tabellare](/funzionalita/revisione-tabellare.md), [operazioni multi-documento](/funzionalita/operazioni-multi-documento.md), [workflow](/funzionalita/workflow.md).
 
-## Fase 4 — Giurisprudenza
+## Fase 4 — Giurisprudenza estesa
 
-- [Verifica delle citazioni giurisprudenziali](/funzionalita/verifica-citazioni-giurisprudenza.md) e integrazione delle [fonti giurisprudenziali](/fonti/giurisprudenza.md) disponibili.
+- Estensione oltre il verticale penale iniziale: [verifica delle citazioni giurisprudenziali](/funzionalita/verifica-citazioni-giurisprudenza.md), fonti giurisprudenziali multi-materia e strumenti avanzati di confronto orientamenti.

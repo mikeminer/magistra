@@ -16,6 +16,7 @@ Questa cartella mappa le fonti del diritto utilizzabili da Magistra, i formati d
 - [Gazzetta Ufficiale](/fonti/gazzetta-ufficiale.md) — pubblicazione ufficiale degli atti.
 - [EUR-Lex](/fonti/eur-lex.md) — diritto dell'Unione Europea.
 - [Giurisprudenza](/fonti/giurisprudenza.md) — sentenze e orientamenti in formato aperto.
+- [Cassazione penale](/fonti/cassazione-penale.md) — fonte prioritaria per orientamenti di legittimità nel verticale penale.
 
 ## Principi di trattamento dei dati
 

@@ -24,6 +24,6 @@ Questa cartella è un **bundle [Open Knowledge Format (OKF) v0.1](https://cloud.
 - [Fonti dei dati](/fonti/index.md) — fonti normative aperte, formati e condizioni di riuso.
 - [Modello dati](/modello-dati/index.md) — FRBR, ELI, struttura Akoma Ntoso, entità del corpus e dell'applicazione, pipeline.
 - [Architettura](/architettura/index.md) — componenti del sistema e flusso RAG.
-- [Funzionalità](/funzionalita/index.md) — cosa fa la piattaforma per l'utente (assistente, ricerca, documenti, workflow).
+- [Funzionalità](/funzionalita/index.md) — cosa fa la piattaforma per l'utente (assistente, ricerca per fattispecie, strategia, documenti, workflow).
 - [Requisiti e qualità](/requisiti/index.md) — ambito MVP, roadmap, privacy, sicurezza, licenze e valutazione delle risposte.
 - [Glossario](/glossario/index.md) — termini giuridici e tecnici.

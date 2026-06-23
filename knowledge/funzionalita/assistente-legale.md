@@ -16,6 +16,8 @@ La funzionalità centrale della piattaforma: un'interfaccia di **chat** in cui l
 
 - È **agentico**: prima di cercare, ragiona sulla richiesta e ne deriva una o più [query di ricerca](/architettura/pianificazione-query.md) mirate, anziché embeddare la domanda grezza; se il contesto è insufficiente, itera con nuove query (vedi [RAG agentico](/glossario/rag-agentico.md)).
 - Risponde a quesiti normativi recuperando i testi pertinenti tramite il [flusso RAG](/architettura/flusso-rag.md).
+- Supporta domande per [fattispecie](/glossario/fattispecie.md): l'utente può descrivere fatti, condotte e contesto invece di indicare subito la norma.
+- Può produrre analisi strategiche strutturate, quando le fonti lo consentono, tramite il [ragionamento strategico difensivo](/funzionalita/ragionamento-strategico.md).
 - **Cita** sempre articolo, [comma](/glossario/comma.md), atto e [URI ELI](/modello-dati/uri-eli.md); le citazioni sono mostrate in un pannello accanto alla risposta e linkano al testo ufficiale.
 - Mantiene il contesto della [conversazione](/modello-dati/conversazione.md) (domande di follow-up).
 - Può operare **dentro un [progetto](/funzionalita/progetti.md)**, usando come contesto i documenti caricati dall'utente oltre al corpus normativo.
@@ -24,5 +26,6 @@ La funzionalità centrale della piattaforma: un'interfaccia di **chat** in cui l
 ## Vincoli
 
 - **Nessuna risposta normativa senza fonte recuperata**: se il retrieval non trova nulla di pertinente, l'assistente lo dichiara invece di rispondere a memoria (vedi [allucinazione](/glossario/allucinazione.md) e [groundedness](/glossario/groundedness.md)).
+- **Nessuna strategia senza fonti e assunzioni esplicite**: quando confronta opzioni, deve separare fonti, inferenze, rischi e dati mancanti.
 - Il modello è [configurabile](/architettura/provider-llm.md); la qualità è misurata dalla [valutazione della qualità](/requisiti/valutazione-qualita.md).
 - Non fornisce consulenza legale: è uno strumento di supporto informativo.

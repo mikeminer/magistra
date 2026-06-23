@@ -21,6 +21,8 @@ Una domanda in linguaggio naturale è spesso poco adatta come query di [ricerca 
 - **Interpreta l'intento**: materia, riferimenti espliciti (atto, articolo), ambito temporale e di [vigenza](/glossario/vigenza.md).
 - **Scompone** una domanda complessa in più sotto-domande.
 - **Riformula** in terminologia giuridica e con sinonimi, generando **più query** alternative.
+- **Costruisce un frame di fattispecie** quando l'utente descrive fatti: condotta, evento, soggetti, fase, istituti candidati, norme candidate e parole chiave giurisprudenziali.
+- **Individua le opzioni strategiche** quando la domanda chiede convenienza o scelta tra percorsi: rito, impugnazione, esecuzione, benefici, termini e rischi.
 - Decide eventuali **filtri** (tipo di atto, data di vigenza, fonte).
 
 Ogni query prodotta viene poi [embeddata](/glossario/embedding.md) e usata per il retrieval; i risultati sono uniti, deduplicati e [rerankati](/glossario/reranking.md).
@@ -30,3 +32,9 @@ Ogni query prodotta viene poi [embeddata](/glossario/embedding.md) e usata per i
 Se il contesto recuperato è insufficiente, l'assistente può generare **nuove query** e ripetere il retrieval, fino a raccogliere materiale adeguato o a dichiarare che il corpus non contiene la risposta.
 
 Le query generate sono conservate nel [Messaggio](/modello-dati/messaggio.md) per tracciabilità e [valutazione della qualità](/requisiti/valutazione-qualita.md).
+
+## Esempi di pianificazione
+
+- Domanda normativa: "art. 1341 c.c." -> query su articolo, comma, clausole vessatorie e approvazione specifica.
+- Domanda per fattispecie: "truffa online con bonifico e restituzione parziale" -> query su truffa, profitto, danno, artifici o raggiri, restituzione, attenuanti e orientamenti pertinenti.
+- Domanda strategica: "patteggio o opposizione a decreto penale?" -> query su rito, termini, effetti sull'esecuzione, benefici e giurisprudenza.

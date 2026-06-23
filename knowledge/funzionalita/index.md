@@ -17,6 +17,8 @@ Questa cartella descrive **cosa fa** la piattaforma dal punto di vista dell'uten
 
 - [Assistente legale (chat)](/funzionalita/assistente-legale.md) — dialogo in linguaggio naturale con risposte ancorate alle fonti.
 - [Ricerca normativa](/funzionalita/ricerca-normativa.md) — ricerca semantica e per parola chiave sul corpus.
+- [Ricerca per fattispecie](/funzionalita/ricerca-per-fattispecie.md) — ricerca che parte dai fatti descritti dall'avvocato, non solo dal numero della norma.
+- [Ragionamento strategico difensivo](/funzionalita/ragionamento-strategico.md) — comparazione di opzioni, presupposti, effetti e rischi.
 - [Confronto versioni](/funzionalita/confronto-versioni.md) — navigazione del testo vigente e delle versioni storiche.
 - [Riferimenti incrociati](/funzionalita/riferimenti-incrociati.md) — collegamenti automatici tra norme, codici e diritto UE.
 - [Verifica delle citazioni giurisprudenziali](/funzionalita/verifica-citazioni-giurisprudenza.md) — controllo che una sentenza citata esista e sia pertinente.
