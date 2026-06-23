@@ -39,5 +39,5 @@ export interface StatoIngestApi {
 }
 export declare function leggiStatoIngestDaEnv(env?: NodeJS.ProcessEnv): Promise<StatoIngestApi>;
 export declare function leggiStatoIngest(database: QueryableDatabase): Promise<StatoIngestApi>;
-export declare function creaDatabaseDaEnv(env?: NodeJS.ProcessEnv): Promise<import("pg").Client>;
+export declare function creaDatabaseDaEnv(env?: NodeJS.ProcessEnv): Promise<QueryableDatabase>;
 //# sourceMappingURL=status.d.ts.map
