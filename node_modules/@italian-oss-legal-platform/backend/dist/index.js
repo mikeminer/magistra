@@ -6,7 +6,7 @@ import { createCitationLabel } from "../../domain/dist/index.js";
 import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "../../ingest/dist/index.js";
 import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv, similaritaCoseno } from "../../llm/dist/index.js";
 import { getCorpusDimostrativo, rispondiConFontiRag } from "../../retrieval/dist/index.js";
-import { NormattivaAdapter, scaricaAttoNormattivaOpenData } from "../../sources/dist/index.js";
+import { CassazionePenaleAdapter, NormattivaAdapter, scaricaAttoNormattivaOpenData, scaricaSchedeCassazionePenale } from "../../sources/dist/index.js";
 import { creaDatabaseDaEnv, databaseConfigurato, isPgliteDatabase } from "../../worker/dist/status.js";
 export async function rispondiConFonti(domanda, env = process.env) {
     const rispostaDatabase = await rispondiConFontiDatabase(domanda, env);
@@ -14,6 +14,9 @@ export async function rispondiConFonti(domanda, env = process.env) {
         embeddingProvider: creaEmbeddingProviderDaEnv(env),
         generatore: creaGeneratoreRispostaDaEnv(env)
     }));
+}
+export function analizzaScenarioPenale(domanda, fonti = []) {
+    return creaScenarioPenale(domanda, creaProfiloDomandaLegale(domanda), fonti);
 }
 export async function rispondiConFontiDatabase(domanda, env = process.env) {
     if (!databaseConfigurato(env)) {
@@ -26,8 +29,10 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
             return rispostaFunzione;
         }
         const profiloDomanda = creaProfiloDomandaLegale(domanda);
+        const recuperoCassazionePenale = await assicuraCassazionePenaleDisponibile(domanda, profiloDomanda, database, env);
         const domandaRetrieval = espandiDomandaPerRetrieval(domanda, profiloDomanda);
         let risultati = await cercaChunkDatabase(domandaRetrieval, database, env);
+        risultati = await completaRisultatiConCassazionePenale(domandaRetrieval, risultati, database, env, profiloDomanda);
         let recuperoFontiOnline = {
             stato: "non-necessario"
         };
@@ -37,12 +42,14 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
             recuperoFontiOnline = await tentaRecuperoFontiOnlineSuMiss(domandaRetrieval, database, env);
             if (recuperoFontiOnline.stato === "riuscito") {
                 risultati = await cercaChunkDatabase(domandaRetrieval, database, env);
+                risultati = await completaRisultatiConCassazionePenale(domandaRetrieval, risultati, database, env, profiloDomanda);
             }
             else if (risultati.length > 0 && deveScartareRisultatiNonMirati(domandaRetrieval, risultati)) {
                 risultati = [];
             }
         }
         if (risultati.length === 0) {
+            const scenarioPenale = creaScenarioPenale(domanda, profiloDomanda, []);
             return {
                 avvertenza: "Informazione generale: il sistema non sostituisce consulenza legale.",
                 citazioni: [],
@@ -53,9 +60,11 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
                     modelloRisposta: generatore.nome,
                     profiloDomanda,
                     providerEmbedding: embeddingProvider.nome,
+                    recuperoCassazionePenale,
                     recuperoFontiOnline,
                     retrieval: "ibrido",
-                    richiedeRevisioneUmana: false
+                    richiedeRevisioneUmana: false,
+                    scenarioPenale
                 },
                 modalita: "rag-locale",
                 risposta: "Non ho trovato fonti sufficienti per rispondere in modo verificabile. Prova a indicare l'atto, l'articolo o il tema giuridico.",
@@ -80,6 +89,7 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
             riferimentiNormativi: riferimentiPerFonte.get(fonte.eli) ?? []
         }));
         const riferimentiNormativi = deduplicaRiferimentiNormativi(fontiRecuperate.flatMap((fonte) => fonte.riferimentiNormativi ?? []));
+        const scenarioPenale = creaScenarioPenale(domanda, profiloDomanda, fontiRecuperate);
         const generata = await generatore.genera({
             domanda: creaDomandaPerGenerazione(domanda, profiloDomanda),
             fonti: fontiRecuperate.map((fonte) => ({
@@ -105,13 +115,16 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
                 modelloRisposta: generata.modello,
                 profiloDomanda,
                 providerEmbedding: embeddingProvider.nome,
+                recuperoCassazionePenale,
                 recuperoFontiOnline,
                 retrieval: "ibrido",
-                richiedeRevisioneUmana: richiedeRevisioneUmana(domanda)
+                richiedeRevisioneUmana: richiedeRevisioneUmana(domanda),
+                scenarioPenale
             },
             modalita: "rag-locale",
             riferimentiNormativi,
-            risposta: generata.testo,
+            risposta: arricchisciRispostaConScenarioPenale(generata.testo, scenarioPenale),
+            scenarioPenale,
             stato: "citata"
         };
     }
@@ -710,6 +723,7 @@ function pulisciTitoloFonte(value) {
 function creaProfiloDomandaLegale(domanda) {
     const normalized = normalizza(domanda).replace(/\s+/g, " ").trim();
     const temi = [];
+    const domandaCassazione = isDomandaSuCassazionePenale(normalized);
     if (isDomandaSuTruffaPenale(normalized)) {
         temi.push("truffa");
     }
@@ -737,7 +751,26 @@ function creaProfiloDomandaLegale(domanda) {
     if (isDomandaSuMisureAlternativePenali(normalized)) {
         temi.push("misure-alternative");
     }
+    if (domandaCassazione) {
+        temi.push("cassazione-penale");
+    }
     const fattispecie = isDomandaPerFattispecie(normalized) || temi.includes("truffa");
+    const materiaPenale = domandaCassazione ||
+        temi.some((tema) => [
+            "truffa",
+            "misure-cautelari",
+            "patteggiamento",
+            "giudizio-abbreviato",
+            "decreto-penale",
+            "continuazione",
+            "benefici-pena",
+            "prescrizione",
+            "misure-alternative"
+        ].includes(tema)) ||
+        normalized.includes("reato") ||
+        normalized.includes("imputat") ||
+        normalized.includes("condanna penale") ||
+        normalized.includes("processo penale");
     const strategica = isDomandaStrategicaPenale(normalized) || temi.some((tema) => [
         "patteggiamento",
         "giudizio-abbreviato",
@@ -749,6 +782,8 @@ function creaProfiloDomandaLegale(domanda) {
     ].includes(tema));
     return {
         fattispecie,
+        materiaPenale,
+        richiedeCassazionePenale: domandaCassazione || (materiaPenale && (strategica || fattispecie)),
         strategica,
         temi: uniqueStrings(temi)
     };
@@ -760,6 +795,9 @@ function espandiDomandaPerRetrieval(domanda, profilo) {
     }
     if (profilo.strategica) {
         espansioni.push("ragionamento strategico opzioni difensive effetti processuali effetti esecutivi rischi presupposti alternative");
+    }
+    if (profilo.richiedeCassazionePenale) {
+        espansioni.push("Cassazione penale orientamenti di legittimita sezione penale sentenza oggetto esito in sintesi fattispecie");
     }
     if (profilo.temi.includes("truffa")) {
         espansioni.push("truffa norma 640 artifici raggiri profitto danno bonifico online restituzione risarcimento attenuanti pena");
@@ -799,6 +837,9 @@ function creaDomandaPerGenerazione(domanda, profilo) {
     }
     if (profilo.strategica) {
         istruzioni.push("Imposta una matrice strategica informativa con opzioni, presupposti, effetti immediati, effetti successivi, rischi e dati mancanti. Non trasformarla in istruzioni operative: resta sulle conseguenze ricavabili dalle fonti.");
+    }
+    if (profilo.richiedeCassazionePenale) {
+        istruzioni.push("Se sono presenti fonti di Cassazione penale, separale dalle norme: usa la giurisprudenza solo come orientamento e segnala se il corpus non e completo o aggiornato.");
     }
     return istruzioni.length > 0
         ? `${domanda}\n\nIstruzioni di formato: ${istruzioni.join(" ")}`
@@ -851,6 +892,44 @@ async function cercaChunkDatabase(domanda, database, env) {
             ? 0.45
             : Math.max(1, migliore * 0.25);
     return ranked.filter((resultItem) => resultItem.punteggio >= soglia).slice(0, 8);
+}
+async function completaRisultatiConCassazionePenale(domanda, risultati, database, env, profilo) {
+    if (!profilo.richiedeCassazionePenale) {
+        return risultati;
+    }
+    const cassazione = await cercaChunkCassazionePenaleDatabase(domanda, database, env);
+    if (cassazione.length === 0) {
+        return risultati;
+    }
+    return unisciRisultatiRetrieval([...risultati, ...cassazione]).slice(0, 12);
+}
+async function cercaChunkCassazionePenaleDatabase(domanda, database, env) {
+    const provider = creaEmbeddingProviderDaEnv(env);
+    const embedding = await provider.generaEmbedding(domanda);
+    const query = isPgliteDatabase(database)
+        ? creaQueryChunkDatabaseCompatibile({ fonte: "Cassazione penale" })
+        : creaQueryChunkDatabase(embedding, { fonte: "Cassazione penale" });
+    const result = (await database.query(query.text, query.values));
+    const rows = isPgliteDatabase(database)
+        ? ordinaChunkCompatibiliPerEmbedding(result.rows ?? [], embedding).slice(0, 80)
+        : (result.rows ?? []);
+    const tokensDomanda = tokenizza(domanda);
+    const richiestaEsplicita = isDomandaSuCassazionePenale(normalizza(domanda));
+    return rows
+        .map((row) => formattaRisultatoDatabase(row, domanda, tokensDomanda, { fonte: "Cassazione penale" }))
+        .filter((resultItem) => richiestaEsplicita || resultItem.punteggioLessicale >= 1 || resultItem.punteggioSemantico >= 0.25)
+        .sort((left, right) => right.punteggio - left.punteggio)
+        .slice(0, richiestaEsplicita ? 6 : 4);
+}
+function unisciRisultatiRetrieval(risultati) {
+    const perId = new Map();
+    for (const risultato of risultati) {
+        const precedente = perId.get(risultato.id);
+        if (!precedente || risultato.punteggio > precedente.punteggio) {
+            perId.set(risultato.id, risultato);
+        }
+    }
+    return [...perId.values()].sort((left, right) => right.punteggio - left.punteggio);
 }
 function deduplicaRiferimentiPerRetrieval(riferimenti) {
     const perChiave = new Map();
@@ -1115,6 +1194,203 @@ async function importaUrnNormattivaNelDatabase(urns, database, env) {
         chunkNormativi: contaSnapshotDatabase(snapshot).chunk_normativi,
         jobId
     };
+}
+async function assicuraCassazionePenaleDisponibile(domanda, profilo, database, env) {
+    if (!profilo.richiedeCassazionePenale || env.CASSAZIONE_PENALE_IMPORT_ENABLED === "false") {
+        return { stato: "non-necessario" };
+    }
+    const presenti = await contaChunkFonte(database, "Cassazione penale");
+    if (presenti > 0 && env.CASSAZIONE_PENALE_REFRESH !== "always") {
+        return {
+            chunkNormativi: presenti,
+            fonte: "Cassazione penale",
+            stato: "gia-presente"
+        };
+    }
+    try {
+        const result = await importaSchedeCassazionePenaleNelDatabase(database, env, domanda);
+        return {
+            chunkNormativi: result.chunkNormativi,
+            fonte: "Cassazione penale",
+            jobId: result.jobId,
+            schede: result.schede,
+            stato: result.chunkNormativi > 0 ? "riuscito" : "fallito"
+        };
+    }
+    catch (error) {
+        return {
+            errore: error instanceof Error ? error.message : "Import Cassazione penale non riuscito.",
+            fonte: "Cassazione penale",
+            stato: "fallito"
+        };
+    }
+}
+async function contaChunkFonte(database, fonte) {
+    try {
+        const result = (await database.query(`select count(*)::int as chunks
+from chunk_normativi
+where citation_fonte = $1`, [fonte]));
+        return Number(result.rows?.[0]?.chunks ?? 0);
+    }
+    catch {
+        return 0;
+    }
+}
+async function importaSchedeCassazionePenaleNelDatabase(database, env, domanda) {
+    const adapter = new CassazionePenaleAdapter();
+    const jobId = `cassazione-penale:${new Date().toISOString()}:${randomUUID()}`;
+    const maxSchede = Number(env.CASSAZIONE_PENALE_MAX_SCHEDE ?? 10);
+    const schede = await scaricaSchedeCassazionePenale(adapter, { maxSchede });
+    const embeddingProvider = creaEmbeddingProviderDaEnv(env);
+    let chunkNormativi = 0;
+    for (const scheda of ordinaSchedeCassazionePerDomanda(schede, domanda).slice(0, maxSchede)) {
+        const embedding = await embeddingProvider.generaEmbedding(scheda.testo);
+        await inserisciSchedaCassazionePenale(database, scheda, embedding, jobId);
+        chunkNormativi += 1;
+    }
+    return {
+        chunkNormativi,
+        jobId,
+        schede: schede.length
+    };
+}
+function ordinaSchedeCassazionePerDomanda(schede, domanda) {
+    const tokens = new Set(tokenizza(domanda));
+    return [...schede].sort((left, right) => punteggioSchedaCassazione(right, tokens) - punteggioSchedaCassazione(left, tokens));
+}
+function punteggioSchedaCassazione(scheda, tokens) {
+    const textTokens = new Set(tokenizza(`${scheda.titolo} ${scheda.testo}`));
+    return [...tokens].reduce((score, token) => score + (textTokens.has(token) ? 1 : 0), 0);
+}
+async function inserisciSchedaCassazionePenale(database, scheda, embedding, jobId) {
+    const dataDeposito = scheda.dataDeposito || new Date().toISOString().slice(0, 10);
+    const eli = creaEliCassazionePenale(scheda, dataDeposito);
+    const versioneId = `${eli}/ita@${dataDeposito}`;
+    const artifactId = `cassazione-penale:${scheda.contentId || hashBreve(scheda.url)}`;
+    const manifestazioneId = `${artifactId}:html`;
+    const itemId = `${manifestazioneId}:item`;
+    const unitaId = `${versioneId}:principio`;
+    const chunkId = `${unitaId}:chunk`;
+    const testo = scheda.testo;
+    const sha256 = createHash("sha256").update(testo, "utf8").digest("hex");
+    const sezione = scheda.sezione ? `Sez. ${scheda.sezione.replace(/\s+sezione$/i, "").trim()}` : undefined;
+    await database.query(`insert into norme (eli, tipo_atto, numero, data_atto, titolo, fonte)
+values ($1, $2, $3, $4, $5, $6)
+on conflict (eli) do update set
+  tipo_atto = excluded.tipo_atto,
+  numero = excluded.numero,
+  data_atto = excluded.data_atto,
+  titolo = excluded.titolo,
+  fonte = excluded.fonte`, [eli, "sentenza", scheda.numero, dataDeposito, scheda.titolo, "Cassazione penale"]);
+    await database.query(`insert into artefatti_fonte (id, fonte, formato, sha256, url_fonte, dimensione_byte)
+values ($1, $2, $3, $4, $5, $6)
+on conflict (id) do update set
+  fonte = excluded.fonte,
+  formato = excluded.formato,
+  sha256 = excluded.sha256,
+  url_fonte = excluded.url_fonte,
+  dimensione_byte = excluded.dimensione_byte`, [artifactId, "Cassazione penale", "html", sha256, scheda.url, Buffer.byteLength(testo, "utf8")]);
+    await database.query(`insert into versioni (id, norma_eli, vigenza_da, vigenza_a, stato)
+values ($1, $2, $3, $4, $5)
+on conflict (id) do update set
+  norma_eli = excluded.norma_eli,
+  vigenza_da = excluded.vigenza_da,
+  vigenza_a = excluded.vigenza_a,
+  stato = excluded.stato`, [versioneId, eli, dataDeposito, null, "storica"]);
+    await database.query(`insert into manifestazioni (id, versione_id, formato, url_fonte, sha256)
+values ($1, $2, $3, $4, $5)
+on conflict (id) do update set
+  versione_id = excluded.versione_id,
+  formato = excluded.formato,
+  url_fonte = excluded.url_fonte,
+  sha256 = excluded.sha256`, [manifestazioneId, versioneId, "html", scheda.url, sha256]);
+    await database.query(`insert into items_fonte (id, manifestazione_id, storage_uri, dimensione_byte)
+values ($1, $2, $3, $4)
+on conflict (id) do update set
+  manifestazione_id = excluded.manifestazione_id,
+  storage_uri = excluded.storage_uri,
+  dimensione_byte = excluded.dimensione_byte`, [itemId, manifestazioneId, scheda.pdfUrl ?? scheda.url, Buffer.byteLength(testo, "utf8")]);
+    await database.query(`insert into unita_normative (id, versione_id, tipo, numero, percorso, testo, eli_unita)
+values ($1, $2, $3, $4, $5, $6, $7)
+on conflict (id) do update set
+  versione_id = excluded.versione_id,
+  tipo = excluded.tipo,
+  numero = excluded.numero,
+  percorso = excluded.percorso,
+  testo = excluded.testo,
+  eli_unita = excluded.eli_unita`, [unitaId, versioneId, "articolo", "principio", "principio", testo, `${eli}/principio`]);
+    await database.query(`insert into chunk_normativi (
+  id,
+  unita_id,
+  artefatto_fonte_id,
+  testo,
+  embedding,
+  citation_eli,
+  citation_fonte,
+  citation_tipo_atto,
+  citation_numero_atto,
+  citation_data_atto,
+  citation_articolo,
+  citation_comma,
+  citation_vigenza_da,
+  citation_vigenza_a,
+  citation_url_fonte
+)
+values ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+on conflict (id) do update set
+  unita_id = excluded.unita_id,
+  artefatto_fonte_id = excluded.artefatto_fonte_id,
+  testo = excluded.testo,
+  embedding = excluded.embedding,
+  citation_eli = excluded.citation_eli,
+  citation_fonte = excluded.citation_fonte,
+  citation_tipo_atto = excluded.citation_tipo_atto,
+  citation_numero_atto = excluded.citation_numero_atto,
+  citation_data_atto = excluded.citation_data_atto,
+  citation_articolo = excluded.citation_articolo,
+  citation_comma = excluded.citation_comma,
+  citation_vigenza_da = excluded.citation_vigenza_da,
+  citation_vigenza_a = excluded.citation_vigenza_a,
+  citation_url_fonte = excluded.citation_url_fonte`, [
+        chunkId,
+        unitaId,
+        artifactId,
+        testo,
+        toPgVector(embedding),
+        `${eli}/principio`,
+        "Cassazione penale",
+        "sentenza",
+        scheda.numero,
+        dataDeposito,
+        "principio",
+        sezione,
+        dataDeposito,
+        null,
+        scheda.url
+    ]);
+    await database.query(`insert into source_runs (id, job_id, fonte, url_fonte, stato, dettagli)
+values ($1, $2, $3, $4, $5, $6::jsonb)
+on conflict (id) do update set
+  job_id = excluded.job_id,
+  stato = excluded.stato,
+  dettagli = excluded.dettagli`, [
+        `${jobId}:${hashBreve(scheda.url)}`,
+        jobId,
+        "Cassazione penale",
+        scheda.url,
+        "acquisita",
+        JSON.stringify({
+            contentId: scheda.contentId,
+            dataDeposito,
+            materia: scheda.materia,
+            pdfUrl: scheda.pdfUrl,
+            sezione: scheda.sezione
+        })
+    ]);
+}
+function creaEliCassazionePenale(scheda, dataDeposito) {
+    const [anno, mese, giorno] = dataDeposito.split("-");
+    return `/eli/it/cassazione/penale/sentenza/${anno}/${mese}/${giorno}/${scheda.numero || hashBreve(scheda.url)}`;
 }
 export function pianificaUrnNormattivaPerRecupero(domanda) {
     const testoRiferimenti = testoPerRiferimentiNormativi(domanda);
@@ -1726,6 +2002,12 @@ function calcolaPunteggioLessicale(domanda, tokensDomanda, testo, metadati, rife
     if (riferimento?.fonte && metadati.fonte === riferimento.fonte) {
         score += 8;
     }
+    if (metadati.fonte === "Cassazione penale" && isDomandaSuCassazionePenale(normalizzata)) {
+        score += 20;
+    }
+    if (metadati.fonte === "Cassazione penale" && isDomandaStrategicaPenale(normalizzata)) {
+        score += 8;
+    }
     if (riferimento?.numeroAtto && metadati.numeroAtto === riferimento.numeroAtto) {
         score += 12;
     }
@@ -2020,6 +2302,11 @@ function estraiConcettoNormativo(normalized) {
             fonte: "Gazzetta Ufficiale"
         };
     }
+    if (isDomandaSuCassazionePenale(normalized)) {
+        return {
+            fonte: "Cassazione penale"
+        };
+    }
     if (isDomandaSuGiurisprudenzaAperta(normalized)) {
         return {
             fonte: "OpenGA - Giustizia Amministrativa"
@@ -2119,7 +2406,6 @@ function isDomandaSuGazzettaUfficiale(normalized) {
 }
 function isDomandaSuGiurisprudenzaAperta(normalized) {
     return (normalized.includes("openga") ||
-        normalized.includes("giurisprudenza") ||
         normalized.includes("orientamento del tar") ||
         normalized.includes("orientamenti del tar") ||
         normalized.includes("sentenza tar") ||
@@ -2127,7 +2413,24 @@ function isDomandaSuGiurisprudenzaAperta(normalized) {
         normalized.includes("silenzio p.a") ||
         normalized.includes("silenzio pa") ||
         normalized.includes("silenzio amministrativo") ||
-        normalized.includes("consiglio di stato"));
+        normalized.includes("consiglio di stato") ||
+        (normalized.includes("giurisprudenza") &&
+            (normalized.includes("amministrativ") || normalized.includes("tar") || normalized.includes("consiglio di stato"))));
+}
+function isDomandaSuCassazionePenale(normalized) {
+    return ((normalized.includes("cassazione") &&
+        (normalized.includes("penal") ||
+            normalized.includes("reato") ||
+            normalized.includes("processo") ||
+            normalized.includes("misure cautelari") ||
+            normalized.includes("patteggi") ||
+            normalized.includes("abbreviat") ||
+            normalized.includes("prescrizion"))) ||
+        normalized.includes("cass. pen") ||
+        normalized.includes("cass pen") ||
+        normalized.includes("giurisprudenza penale") ||
+        normalized.includes("orientamento di legittimita penale") ||
+        normalized.includes("orientamenti di legittimita penale"));
 }
 function isCodiceCivileAlias(normalized) {
     return (/\bcodice\s+civile\b/.test(normalized) ||
@@ -2314,6 +2617,303 @@ function isDomandaSuMisureAlternativePenali(normalized) {
         normalized.includes("detenzione domiciliare") ||
         normalized.includes("semiliberta") ||
         normalized.includes("semilibertà"));
+}
+function creaScenarioPenale(domanda, profilo, fonti) {
+    if (!profilo.materiaPenale && !profilo.richiedeCassazionePenale) {
+        return undefined;
+    }
+    const normalized = normalizza(domanda);
+    const dati = estraiDatiScenarioPenale(domanda);
+    const fontiNormative = fonti.filter((fonte) => fonte.metadati?.fonte !== "Cassazione penale");
+    const fontiCassazione = fonti.filter((fonte) => fonte.metadati?.fonte === "Cassazione penale");
+    const opzioni = creaOpzioniScenarioPenale(normalized, profilo);
+    const calcoli = creaCalcoliScenarioPenale(normalized, dati, fonti);
+    const datiMancanti = creaDatiMancantiScenarioPenale(normalized, profilo, dati, fontiCassazione);
+    const orientamentiCassazione = selezionaOrientamentiCassazione(fontiCassazione, normalized, profilo);
+    return {
+        calcoli,
+        dati,
+        datiMancanti,
+        fonti: {
+            cassazionePenale: fontiCassazione.length,
+            normative: fontiNormative.length
+        },
+        materia: "penale",
+        orientamentiCassazione,
+        opzioni,
+        temi: profilo.temi
+    };
+}
+function selezionaOrientamentiCassazione(fontiCassazione, normalized, profilo) {
+    const conPunteggio = fontiCassazione.map((fonte) => ({
+        fonte,
+        punteggio: punteggioOrientamentoCassazione(fonte, normalized)
+    }));
+    const mirati = conPunteggio
+        .filter((item) => item.punteggio > 0)
+        .sort((a, b) => b.punteggio - a.punteggio);
+    const selezionati = mirati.length > 0 || profilo.temi.length > 0
+        ? mirati
+        : conPunteggio.sort((a, b) => (b.fonte.punteggioLessicale ?? 0) - (a.fonte.punteggioLessicale ?? 0));
+    return selezionati.slice(0, 3).map(({ fonte }) => ({
+        label: fonte.label,
+        sintesi: sintetizzaOrientamentoCassazione(fonte.testo),
+        urlFonte: fonte.urlFonte
+    }));
+}
+function punteggioOrientamentoCassazione(fonte, normalized) {
+    const testo = normalizza(`${fonte.label ?? ""} ${fonte.testo ?? ""}`);
+    const gruppi = [
+        [["misure cautelari", "inquinamento probatorio", "esigenze cautelari"], ["misure cautelari", "inquinamento probatorio", "esigenze cautelari", "pericolo di inquinamento"]],
+        [["pattegg"], ["patteggiamento", "applicazione della pena", "pena concordata"]],
+        [["abbreviat"], ["giudizio abbreviato", "abbreviato"]],
+        [["decreto penale", "opposizione"], ["decreto penale", "opposizione", "decreto di condanna"]],
+        [["continuaz"], ["continuazione", "disegno criminoso", "incidente di esecuzione"]],
+        [["prescrizion"], ["prescrizione", "interruzione", "sospensione"]],
+        [["truffa", "bonifico"], ["truffa", "bonifico", "art. 640", "640"]],
+        [["sospensione condizionale", "beneficio"], ["sospensione condizionale", "revoca del beneficio", "beneficio"]],
+        [["riesame"], ["riesame", "tribunale del riesame"]]
+    ];
+    let punteggio = 0;
+    for (const [trigger, termini] of gruppi) {
+        if (!trigger.some((termine) => normalized.includes(termine))) {
+            continue;
+        }
+        for (const termine of termini) {
+            if (testo.includes(termine)) {
+                punteggio += 10;
+            }
+        }
+    }
+    return punteggio;
+}
+function sintetizzaOrientamentoCassazione(testo) {
+    const match = testo.match(/Esito in sintesi:\s*([\s\S]*?)(?:Documento ufficiale:|$)/i);
+    const sintesi = normalizzaSpaziRisposta(match?.[1] ?? testo);
+    return troncaRisposta(sintesi, 520);
+}
+function normalizzaSpaziRisposta(testo) {
+    return String(testo ?? "").replace(/\s+/g, " ").trim();
+}
+function troncaRisposta(testo, limite) {
+    if (testo.length <= limite) {
+        return testo;
+    }
+    const taglio = testo.slice(0, limite);
+    const ultimoSpazio = taglio.lastIndexOf(" ");
+    return `${taglio.slice(0, ultimoSpazio > 320 ? ultimoSpazio : limite).trim()}...`;
+}
+function arricchisciRispostaConScenarioPenale(risposta, scenario) {
+    if (!scenario) {
+        return risposta;
+    }
+    const righe = ["", "Scenario penale strutturato:"];
+    if (scenario.opzioni.length > 0) {
+        righe.push(`Opzioni da confrontare: ${scenario.opzioni.map((opzione) => opzione.titolo).join("; ")}.`);
+    }
+    if (scenario.calcoli.length > 0) {
+        righe.push("Calcoli preliminari:");
+        for (const calcolo of scenario.calcoli) {
+            righe.push(`- ${calcolo.nome}: ${calcolo.risultato} (${calcolo.avvertenza})`);
+        }
+    }
+    else {
+        righe.push("Calcoli preliminari: non eseguiti per assenza di input numerici o date sufficienti.");
+    }
+    if (scenario.orientamentiCassazione?.length > 0) {
+        righe.push("Orientamenti Cassazione penale:");
+        for (const orientamento of scenario.orientamentiCassazione) {
+            righe.push(`- ${orientamento.label}: ${orientamento.sintesi}`);
+        }
+    }
+    righe.push(`Fonti scenario: ${scenario.fonti.normative} normative, ${scenario.fonti.cassazionePenale} Cassazione penale.`);
+    if (scenario.datiMancanti.length > 0) {
+        righe.push(`Dati mancanti: ${scenario.datiMancanti.join("; ")}.`);
+    }
+    return `${risposta}\n${righe.join("\n")}`;
+}
+function creaOpzioniScenarioPenale(normalized, profilo) {
+    const opzioni = [];
+    const aggiungi = (id, titolo, presupposto) => {
+        if (!opzioni.some((opzione) => opzione.id === id)) {
+            opzioni.push({ id, presupposto, titolo });
+        }
+    };
+    if (isDomandaSuPatteggiamento(normalized)) {
+        aggiungi("patteggiamento", "Patteggiamento", "Pena concordabile e verifica degli effetti ex artt. 444-445 c.p.p.");
+    }
+    if (isDomandaSuGiudizioAbbreviato(normalized)) {
+        aggiungi("abbreviato", "Giudizio abbreviato", "Valutare riduzione pena, stato degli atti e convenienza rispetto al dibattimento.");
+    }
+    if (isDomandaSuDecretoPenale(normalized)) {
+        aggiungi("opposizione-decreto-penale", "Opposizione al decreto penale", "Verificare notifica, termine per opposizione e riti alternativi attivabili.");
+    }
+    if (isDomandaSuContinuazionePenale(normalized)) {
+        aggiungi("continuazione", "Continuazione / incidente di esecuzione", "Valutare identita del disegno criminoso e fase esecutiva.");
+    }
+    if (isDomandaSuPrescrizionePenale(normalized)) {
+        aggiungi("prescrizione", "Prescrizione", "Richiede data del fatto, qualificazione, pena edittale e cause di sospensione/interruzione.");
+    }
+    if (isDomandaSuSospensioneBeneficiPenali(normalized)) {
+        aggiungi("benefici-pena", "Benefici e sospensione condizionale", "Richiede precedenti, pene gia sospese, nuova pena e rischio revoca.");
+    }
+    if (isDomandaSuMisureAlternativePenali(normalized)) {
+        aggiungi("misure-alternative", "Misure alternative", "Richiede pena da espiare, titolo esecutivo e condizioni personali.");
+    }
+    if (isDomandaSuMisureCautelariPenali(normalized)) {
+        aggiungi("misure-cautelari", "Misure cautelari personali", "Verificare limite legale, gravi indizi, esigenze, adeguatezza e proporzionalita.");
+    }
+    if (profilo.fattispecie) {
+        aggiungi("qualificazione", "Qualificazione della fattispecie", "Collegare i fatti agli elementi costitutivi e agli orientamenti disponibili.");
+    }
+    return opzioni;
+}
+function creaCalcoliScenarioPenale(normalized, dati, fonti) {
+    const calcoli = [];
+    if (dati.penaBaseMesi && isDomandaSuPatteggiamento(normalized)) {
+        calcoli.push({
+            input: { penaBaseMesi: dati.penaBaseMesi },
+            nome: "Riduzione massima teorica patteggiamento",
+            risultato: `${formattaMesiPena(Math.ceil((dati.penaBaseMesi * 2) / 3))} dopo riduzione di un terzo su ${formattaMesiPena(dati.penaBaseMesi)}`,
+            avvertenza: "Stima aritmetica: non valuta ammissibilita, pena illegale, consenso delle parti o controlli del giudice."
+        });
+    }
+    if (dati.penaBaseMesi && isDomandaSuGiudizioAbbreviato(normalized)) {
+        calcoli.push({
+            input: { penaBaseMesi: dati.penaBaseMesi },
+            nome: "Riduzione rito abbreviato",
+            risultato: `${formattaMesiPena(Math.ceil((dati.penaBaseMesi * 2) / 3))} se applicabile riduzione di un terzo`,
+            avvertenza: "Stima aritmetica: verificare natura del reato, testo vigente e condizioni processuali."
+        });
+    }
+    if (dati.dataNotificaDecreto && isDomandaSuDecretoPenale(normalized)) {
+        calcoli.push({
+            input: { dataNotificaDecreto: dati.dataNotificaDecreto },
+            nome: "Scadenza indicativa opposizione decreto penale",
+            risultato: aggiungiGiorniIso(dati.dataNotificaDecreto, 15),
+            avvertenza: "Termine calcolato a 15 giorni dalla data indicata: verificare dies a quo, sospensioni, modalita di notifica e calendario processuale."
+        });
+    }
+    const penaMassimaMesi = dati.penaMassimaMesi ?? estraiPenaMassimaMesiDaFonti(fonti);
+    if (dati.dataFatto && penaMassimaMesi && isDomandaSuPrescrizionePenale(normalized)) {
+        const anniBase = Math.max(6, Math.ceil(penaMassimaMesi / 12));
+        calcoli.push({
+            input: { dataFatto: dati.dataFatto, penaMassimaMesi },
+            nome: "Prescrizione base del delitto",
+            risultato: aggiungiAnniIso(dati.dataFatto, anniBase),
+            avvertenza: "Stima base ex pena massima: non considera sospensioni, interruzioni, recidiva, atti processuali o discipline speciali."
+        });
+    }
+    return calcoli;
+}
+function creaDatiMancantiScenarioPenale(normalized, profilo, dati, fontiCassazione) {
+    const mancanti = [];
+    if (profilo.richiedeCassazionePenale && fontiCassazione.length === 0) {
+        mancanti.push("orientamenti di Cassazione penale pertinenti o aggiornati");
+    }
+    if (profilo.strategica && !dati.faseProcessuale) {
+        mancanti.push("fase processuale attuale");
+    }
+    if ((isDomandaSuPatteggiamento(normalized) || isDomandaSuGiudizioAbbreviato(normalized)) && !dati.penaBaseMesi) {
+        mancanti.push("pena base o pena ipotizzata");
+    }
+    if (isDomandaSuDecretoPenale(normalized) && !dati.dataNotificaDecreto) {
+        mancanti.push("data di notifica del decreto penale");
+    }
+    if (isDomandaSuPrescrizionePenale(normalized)) {
+        if (!dati.dataFatto) {
+            mancanti.push("data del fatto/reato");
+        }
+        if (!dati.penaMassimaMesi) {
+            mancanti.push("pena massima edittale o norma incriminatrice completa");
+        }
+    }
+    if (isDomandaSuSospensioneBeneficiPenali(normalized) && !dati.precedentiNoti) {
+        mancanti.push("precedenti, benefici gia concessi e pene sospese");
+    }
+    return uniqueStrings(mancanti);
+}
+function estraiDatiScenarioPenale(domanda) {
+    const normalized = normalizza(domanda);
+    return {
+        dataFatto: estraiDataVicinoA(domanda, /(fatto|reato|commess[oa]|condotta)/i),
+        dataNotificaDecreto: estraiDataVicinoA(domanda, /(notific|decreto penale)/i),
+        faseProcessuale: estraiFaseProcessuale(normalized),
+        penaBaseMesi: estraiPenaMesi(domanda, /(pena\s+(?:base|ipotizzata|concordata)|pena\s+di)/i),
+        penaMassimaMesi: estraiPenaMesi(domanda, /(pena\s+massima|massimo\s+edittale|pena\s+edittale\s+massima)/i),
+        precedentiNoti: normalized.includes("precedent")
+    };
+}
+function estraiFaseProcessuale(normalized) {
+    if (normalized.includes("indagini")) {
+        return "indagini";
+    }
+    if (normalized.includes("udienza preliminare")) {
+        return "udienza-preliminare";
+    }
+    if (normalized.includes("dibattimento")) {
+        return "dibattimento";
+    }
+    if (normalized.includes("esecuzione")) {
+        return "esecuzione";
+    }
+    return undefined;
+}
+function estraiPenaMesi(domanda, label) {
+    const match = domanda.match(new RegExp(`${label.source}[^\\n\\.;,]{0,80}`, "i"));
+    const segmento = match?.[0] ?? "";
+    if (!segmento) {
+        return undefined;
+    }
+    const anni = Number(segmento.match(/([0-9]+)\s*ann/i)?.[1] ?? 0);
+    const mesi = Number(segmento.match(/([0-9]+)\s*mes/i)?.[1] ?? 0);
+    const giorni = Number(segmento.match(/([0-9]+)\s*giorn/i)?.[1] ?? 0);
+    const totale = anni * 12 + mesi + Math.ceil(giorni / 30);
+    return totale > 0 ? totale : undefined;
+}
+function estraiPenaMassimaMesiDaFonti(fonti) {
+    for (const fonte of fonti) {
+        const testo = fonte.testo ?? "";
+        const match = testo.match(/(?:reclusione|arresto)[^.]{0,120}?(?:a|ad)\s+([0-9]+)\s+ann/i);
+        if (match?.[1]) {
+            return Number(match[1]) * 12;
+        }
+    }
+    return undefined;
+}
+function estraiDataVicinoA(domanda, label) {
+    const match = domanda.match(new RegExp(`${label.source}[^\\n]{0,120}`, "i")) ??
+        domanda.match(new RegExp(`[^\\n]{0,120}${label.source}`, "i"));
+    return match ? normalizzaDataItaliana(match[0]) : undefined;
+}
+function normalizzaDataItaliana(value) {
+    const slash = value.match(/\b([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{4})\b/);
+    if (slash) {
+        return `${slash[3]}-${String(slash[2]).padStart(2, "0")}-${String(slash[1]).padStart(2, "0")}`;
+    }
+    const iso = value.match(/\b(20[0-9]{2})-([0-9]{1,2})-([0-9]{1,2})\b/);
+    if (iso) {
+        return `${iso[1]}-${String(iso[2]).padStart(2, "0")}-${String(iso[3]).padStart(2, "0")}`;
+    }
+    return undefined;
+}
+function aggiungiGiorniIso(date, giorni) {
+    const value = new Date(`${date}T00:00:00.000Z`);
+    value.setUTCDate(value.getUTCDate() + giorni);
+    return value.toISOString().slice(0, 10);
+}
+function aggiungiAnniIso(date, anni) {
+    const value = new Date(`${date}T00:00:00.000Z`);
+    value.setUTCFullYear(value.getUTCFullYear() + anni);
+    return value.toISOString().slice(0, 10);
+}
+function formattaMesiPena(mesiTotali) {
+    const anni = Math.floor(mesiTotali / 12);
+    const mesi = mesiTotali % 12;
+    return [
+        anni > 0 ? `${anni} ${anni === 1 ? "anno" : "anni"}` : "",
+        mesi > 0 ? `${mesi} ${mesi === 1 ? "mese" : "mesi"}` : ""
+    ].filter(Boolean).join(" e ") || "0 mesi";
 }
 function isDomandaSuDurataLocazione(normalized) {
     const parlaDiLocazione = normalized.includes("locazione") ||
@@ -2522,6 +3122,7 @@ function parseActType(value) {
         normalized === "regio-decreto" ||
         normalized === "codice" ||
         normalized === "regolamento" ||
+        normalized === "sentenza" ||
         normalized === "trattato-ue") {
         return normalized;
     }

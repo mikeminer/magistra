@@ -48,6 +48,10 @@ export function createChunk(input) {
     };
 }
 export function createCitationLabel(metadata) {
+    if (metadata.fonte === "Cassazione penale" || metadata.tipoAtto === "sentenza") {
+        const comma = metadata.comma ? `, ${metadata.comma}` : "";
+        return `Cass. pen., ${metadata.numeroAtto}, deposito ${metadata.dataAtto}${comma}`;
+    }
     const comma = metadata.comma ? `, comma ${metadata.comma}` : "";
     const validity = metadata.vigenzaA
         ? `vigente dal ${metadata.vigenzaDa} al ${metadata.vigenzaA}`

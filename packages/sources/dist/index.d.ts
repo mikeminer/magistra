@@ -24,6 +24,21 @@ export interface DocumentoFonteScaricato {
     sourceUrl: string;
     xml: string;
 }
+export interface SchedaCassazionePenale {
+    contentId: string;
+    dataDeposito: string;
+    dataUdienza?: string;
+    fonte: FonteEsterna;
+    materia?: string;
+    numero: string;
+    oggetto?: string;
+    pdfUrl?: string;
+    sezione?: string;
+    sintesi?: string;
+    testo: string;
+    titolo: string;
+    url: string;
+}
 export type FetchFonte = (url: string, init?: {
     body?: string;
     headers?: Record<string, string>;
@@ -77,6 +92,14 @@ export declare class GiurisprudenzaApertaAdapter implements AdapterFonteEsterna 
         ok: boolean;
     };
 }
+export declare class CassazionePenaleAdapter implements AdapterFonteEsterna {
+    readonly fonte: FonteEsterna;
+    pianificaRichieste(seed?: string): RichiestaFonte[];
+    validaRiuso(): {
+        ok: boolean;
+        motivo: string;
+    };
+}
 export declare function creaRegistroFonti(): AdapterFonteEsterna[];
 export declare function fontiCatalogabili(): {
     id: string;
@@ -97,5 +120,9 @@ export declare function fontiCatalogabili(): {
 export declare function assertRiusoConsentito(adapter: AdapterFonteEsterna): void;
 export declare function scaricaDocumentoAkomaNtoso(adapter: AdapterFonteEsterna, url: string, fetchImpl?: FetchFonte): Promise<DocumentoFonteScaricato>;
 export declare function scaricaAttoNormattivaOpenData(adapter: NormattivaAdapter, urn: string, fetchImpl?: FetchFonte): Promise<DocumentoFonteScaricato>;
+export declare function scaricaSchedeCassazionePenale(adapter: CassazionePenaleAdapter, options?: {
+    maxSchede?: number;
+    url?: string;
+}, fetchImpl?: FetchFonte): Promise<SchedaCassazionePenale[]>;
 export declare function creaUrlNormattivaDaUrn(urn: string): string;
 //# sourceMappingURL=index.d.ts.map

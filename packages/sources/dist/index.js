@@ -16,6 +16,7 @@ const EUR_LEX_REUSE_DECISION_URL = "https://eur-lex.europa.eu/eli/dec/2011/833/o
 const GAZZETTA_BASE_URL = "https://www.gazzettaufficiale.it";
 const OPENGA_BASE_URL = "https://openga.giustizia-amministrativa.it";
 const CC_BY_4_URL = "https://creativecommons.org/licenses/by/4.0/deed.it";
+const CASSAZIONE_BASE_URL = "https://www.cortedicassazione.it";
 export class NormattivaAdapter {
     fonte = {
         ambitoRiuso: "Legislazione statale italiana acquisita tramite Open Data o URL Normattiva espliciti, con conservazione di URN, ELI e URL sorgente.",
@@ -127,12 +128,49 @@ export class GiurisprudenzaApertaAdapter {
         return { ok: true };
     }
 }
+export class CassazionePenaleAdapter {
+    fonte = {
+        ambitoRiuso: "Schede pubbliche della Corte Suprema di Cassazione per giurisprudenza penale: metadati, oggetto, esito in sintesi e link al documento ufficiale. L'ingest conserva il link alla fonte e non sostituisce Italgiure o il Massimario.",
+        descrizione: "Giurisprudenza penale di legittimita pubblicata dalla Corte di Cassazione.",
+        evidenzeRiuso: [
+            `${CASSAZIONE_BASE_URL}/it/giurisprudenza_penale.page`,
+            `${CASSAZIONE_BASE_URL}/it/note_legali.page`
+        ],
+        frequenzaSuggerita: "giornaliera",
+        id: "cassazione-penale",
+        licenza: "Schede pubbliche del sito istituzionale della Corte Suprema di Cassazione; riuso da verificare sul singolo documento e conservando URL ufficiale.",
+        nome: "Cassazione penale",
+        riuso: "da-verificare",
+        tipo: "giurisprudenza",
+        url: `${CASSAZIONE_BASE_URL}/it/giurisprudenza_penale.page`
+    };
+    pianificaRichieste(seed = "giurisprudenza_penale.page") {
+        const url = seed.startsWith("http")
+            ? seed
+            : `${CASSAZIONE_BASE_URL}/it/${seed.replace(/^\/+/, "")}`;
+        return [
+            {
+                fonteId: this.fonte.id,
+                metodo: "GET",
+                motivo: "Acquisizione schede pubbliche di giurisprudenza penale dal sito ufficiale della Corte di Cassazione",
+                url
+            }
+        ];
+    }
+    validaRiuso() {
+        return {
+            ok: true,
+            motivo: "Import limitato a schede pubbliche, metadati, sintesi e URL ufficiali; il testo integrale resta tracciato tramite link al documento originario."
+        };
+    }
+}
 export function creaRegistroFonti() {
     return [
         new NormattivaAdapter(),
         new EurLexAdapter(),
         new GazzettaUfficialeAdapter(),
-        new GiurisprudenzaApertaAdapter()
+        new GiurisprudenzaApertaAdapter(),
+        new CassazionePenaleAdapter()
     ];
 }
 export function fontiCatalogabili() {
@@ -223,6 +261,182 @@ export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fe
         }
         throw error;
     }
+}
+export async function scaricaSchedeCassazionePenale(adapter, options = {}, fetchImpl = fetchConFallbackCaLocale) {
+    assertRiusoConsentito(adapter);
+    const maxSchede = Math.max(1, Math.min(Number(options.maxSchede ?? 8), 30));
+    const paginaUrl = options.url ?? `${CASSAZIONE_BASE_URL}/it/giurisprudenza_penale.page`;
+    const response = await fetchImpl(paginaUrl, {
+        headers: {
+            accept: "text/html,application/xhtml+xml",
+            "user-agent": "MagistraOS/0.1 (+https://github.com/mikeminer/Italian-OSS-Legal-Platform)"
+        },
+        method: "GET"
+    });
+    if (!response.ok) {
+        throw new Error(`Download Cassazione penale fallito (${response.status} ${response.statusText}): ${paginaUrl}`);
+    }
+    const html = await response.text();
+    const links = estraiLinkDettaglioCassazionePenale(html, paginaUrl).slice(0, maxSchede);
+    const schede = [];
+    for (const link of links) {
+        try {
+            const scheda = await scaricaSchedaCassazionePenaleDettaglio(adapter, link.url, fetchImpl);
+            if (scheda.testo.trim().length > 0) {
+                schede.push(scheda);
+            }
+        }
+        catch {
+            schede.push(link);
+        }
+    }
+    return schede;
+}
+async function scaricaSchedaCassazionePenaleDettaglio(adapter, url, fetchImpl) {
+    const response = await fetchImpl(url, {
+        headers: {
+            accept: "text/html,application/xhtml+xml",
+            "user-agent": "MagistraOS/0.1 (+https://github.com/mikeminer/Italian-OSS-Legal-Platform)"
+        },
+        method: "GET"
+    });
+    if (!response.ok) {
+        throw new Error(`Download dettaglio Cassazione penale fallito (${response.status} ${response.statusText}): ${url}`);
+    }
+    const html = await response.text();
+    const numeroData = estraiNumeroDataCassazionePenale(html);
+    const sezione = estraiTestoPrimaOccorrenza(html, /\b((?:Prima|Seconda|Terza|Quarta|Quinta|Sesta|Settima|Sezioni Unite)\s+sezione)\b/i);
+    const materia = estraiTestoPrimaOccorrenza(html, /Sentenza\s*\|\s*Materia:\s*(?:<strong>)?([\s\S]*?)(?:<\/strong>)?<\/p>/i) ??
+        estraiTestoPrimaOccorrenza(html, /Materia:\s*([\s\S]*?)<\/p>/i);
+    const oggetto = estraiSezioneHtmlCassazione(html, /<h[2-4][^>]*>\s*Oggetto\s*<\/h[2-4]>/i);
+    const sintesi = estraiSezioneHtmlCassazione(html, /<h[2-4][^>]*>\s*L[’'`]?esito in sintesi\s*<\/h[2-4]>/i);
+    const dataUdienza = estraiTestoPrimaOccorrenza(html, /Data udienza:\s*([\s\S]*?)<\/p>/i);
+    const pdfUrl = estraiLinkPdfCassazionePenale(html, url);
+    const testo = normalizzaSpazi([
+        numeroData.titolo,
+        sezione ? `Sezione: ${sezione}` : "",
+        materia ? `Materia: ${materia}` : "",
+        dataUdienza ? `Data udienza: ${dataUdienza}` : "",
+        oggetto ? `Oggetto: ${oggetto}` : "",
+        sintesi ? `Esito in sintesi: ${sintesi}` : "",
+        pdfUrl ? `Documento ufficiale: ${pdfUrl}` : ""
+    ].filter(Boolean).join(" "));
+    return {
+        contentId: new URL(url).searchParams.get("contentId") ?? hashTestoCassazione(url),
+        dataDeposito: numeroData.dataDeposito,
+        dataUdienza,
+        fonte: adapter.fonte,
+        materia,
+        numero: numeroData.numero,
+        oggetto,
+        pdfUrl,
+        sezione,
+        sintesi,
+        testo,
+        titolo: numeroData.titolo,
+        url
+    };
+}
+function estraiLinkDettaglioCassazionePenale(html, paginaUrl) {
+    const links = [];
+    const seen = new Set();
+    const regex = /<a[^>]+href=["']([^"']*penale_dettaglio\.page\?contentId=[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    for (const match of html.matchAll(regex)) {
+        const href = match[1];
+        const text = cleanHtmlText(match[2] ?? "");
+        const url = new URL(href.replace(/&amp;/g, "&"), paginaUrl).toString();
+        const contentId = new URL(url).searchParams.get("contentId") ?? hashTestoCassazione(url);
+        if (seen.has(contentId)) {
+            continue;
+        }
+        seen.add(contentId);
+        links.push({
+            contentId,
+            dataDeposito: estraiDataDepositoDaTitoloCassazione(text),
+            fonte: {
+                ambitoRiuso: "Scheda pubblica di giurisprudenza penale della Corte di Cassazione.",
+                descrizione: "Scheda pubblica Cassazione penale.",
+                evidenzeRiuso: [url],
+                frequenzaSuggerita: "manuale",
+                id: "cassazione-penale",
+                licenza: "Scheda pubblica del sito Corte di Cassazione; riuso da verificare sul singolo documento.",
+                nome: "Cassazione penale",
+                riuso: "da-verificare",
+                tipo: "giurisprudenza",
+                url
+            },
+            numero: estraiNumeroSentenzaDaTitoloCassazione(text),
+            testo: text,
+            titolo: text || "Scheda Cassazione penale",
+            url
+        });
+    }
+    return links;
+}
+function estraiNumeroDataCassazionePenale(html) {
+    const titolo = estraiTestoPrimaOccorrenza(html, /<h2[^>]*>\s*(Sentenza Numero:[\s\S]*?)<\/h2>/i) ??
+        estraiTestoPrimaOccorrenza(html, /(Sentenza Numero:[\s\S]{0,160})/i) ??
+        "Scheda Cassazione penale";
+    return {
+        dataDeposito: estraiDataDepositoDaTitoloCassazione(titolo) ?? new Date().toISOString().slice(0, 10),
+        numero: estraiNumeroSentenzaDaTitoloCassazione(titolo) ?? hashTestoCassazione(titolo),
+        titolo
+    };
+}
+function estraiSezioneHtmlCassazione(html, marker) {
+    const match = marker.exec(html);
+    if (!match || match.index === undefined) {
+        return undefined;
+    }
+    const start = match.index + match[0].length;
+    const nextHeading = html.slice(start).search(/<h[2-4][^>]*>|<section|<footer/i);
+    const raw = html.slice(start, nextHeading >= 0 ? start + nextHeading : start + 2500);
+    const text = cleanHtmlText(raw);
+    return text.length > 0 ? text : undefined;
+}
+function estraiTestoPrimaOccorrenza(html, regex) {
+    const value = cleanHtmlText(regex.exec(html)?.[1] ?? "");
+    return value.length > 0 ? value : undefined;
+}
+function estraiLinkPdfCassazionePenale(html, pageUrl) {
+    const match = html.match(/<a[^>]+href=["']([^"']+\.pdf[^"']*)["'][^>]*>/i);
+    return match?.[1] ? new URL(match[1].replace(/&amp;/g, "&"), pageUrl).toString() : undefined;
+}
+function estraiNumeroSentenzaDaTitoloCassazione(titolo) {
+    return titolo.match(/(?:Sentenza\s+)?(?:Numero|n\.)\s*:?\s*([0-9]+)/i)?.[1];
+}
+function estraiDataDepositoDaTitoloCassazione(titolo) {
+    const iso = titolo.match(/\b(20[0-9]{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12][0-9]|3[01])\b/);
+    if (iso) {
+        return `${iso[1]}-${String(iso[2]).padStart(2, "0")}-${String(iso[3]).padStart(2, "0")}`;
+    }
+    const textual = titolo.match(/deposito\s+(?:del\s+)?([0-9]{1,2})\s+([a-zà]+)\s+(20[0-9]{2})/i);
+    if (!textual) {
+        return undefined;
+    }
+    const month = mesiItaliani[textual[2]?.toLowerCase() ?? ""];
+    return month ? `${textual[3]}-${month}-${String(textual[1]).padStart(2, "0")}` : undefined;
+}
+const mesiItaliani = {
+    aprile: "04",
+    agosto: "08",
+    dicembre: "12",
+    febbraio: "02",
+    gennaio: "01",
+    giugno: "06",
+    luglio: "07",
+    maggio: "05",
+    marzo: "03",
+    novembre: "11",
+    ottobre: "10",
+    settembre: "09"
+};
+function hashTestoCassazione(value) {
+    let hash = 5381;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = ((hash << 5) + hash + value.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
 }
 export function creaUrlNormattivaDaUrn(urn) {
     return `${NORMATTIVA_BASE_URL}/uri-res/N2Ls?${urn}`;
@@ -374,15 +588,22 @@ function leggiCertificatiCaLocali() {
         "artifacts/certs/avast-root.pem",
         "artifacts/certs/local-webmail-shield-root.pem",
         "certs/local-ca.pem",
+        "../../artifacts/certs/avast-root.pem",
+        "../../artifacts/certs/local-webmail-shield-root.pem",
+        "../../certs/local-ca.pem",
+        new URL("../../../artifacts/certs/avast-root.pem", import.meta.url),
+        new URL("../../../artifacts/certs/local-webmail-shield-root.pem", import.meta.url),
+        new URL("../../../certs/local-ca.pem", import.meta.url),
         "/app/certs/local-ca.pem"
     ];
     const certs = [];
     const seen = new Set();
     for (const candidate of candidates) {
-        if (!candidate || seen.has(candidate) || !existsSync(candidate)) {
+        const key = candidate instanceof URL ? candidate.href : candidate;
+        if (!candidate || seen.has(key) || !existsSync(candidate)) {
             continue;
         }
-        seen.add(candidate);
+        seen.add(key);
         certs.push(readFileSync(candidate, "utf8"));
     }
     return certs.length > 0 ? certs.join("\n") : undefined;
@@ -575,9 +796,13 @@ function decodeHtmlEntities(value) {
             eacute: "e",
             igrave: "i",
             lt: "<",
+            ldquo: '"',
             nbsp: " ",
+            ndash: "-",
             ograve: "o",
             quot: '"',
+            rdquo: '"',
+            rsquo: "'",
             ugrave: "u"
         };
         if (lower in named) {

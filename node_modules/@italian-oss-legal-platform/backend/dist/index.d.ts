@@ -27,6 +27,7 @@ interface DocumentoUploadRequest {
     nomeFile?: string;
 }
 export declare function rispondiConFonti(domanda: string, env?: NodeJS.ProcessEnv): Promise<RispostaConFonti>;
+export declare function analizzaScenarioPenale(domanda: string, fonti?: unknown[]): unknown;
 export declare function rispondiConFontiDatabase(domanda: string, env?: NodeJS.ProcessEnv): Promise<RispostaConFonti | null>;
 export declare function leggiFonte(id: string, env?: NodeJS.ProcessEnv): Promise<ApiResult>;
 export declare function leggiReviewQueue(env?: NodeJS.ProcessEnv, adminToken?: string): Promise<ApiResult>;

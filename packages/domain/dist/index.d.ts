@@ -1,4 +1,4 @@
-export type ActType = "legge" | "decreto-legge" | "decreto-legislativo" | "codice" | "regolamento" | "trattato-ue" | "altro";
+export type ActType = "legge" | "decreto-legge" | "decreto-legislativo" | "codice" | "regolamento" | "sentenza" | "trattato-ue" | "altro";
 export type VersionStatus = "vigente" | "abrogata" | "originaria" | "storica";
 export type StructuralUnitType = "articolo" | "comma" | "lettera" | "capo" | "titolo";
 export type ReferenceType = "rinvio" | "modifica" | "abrogazione" | "recepimento-ue";

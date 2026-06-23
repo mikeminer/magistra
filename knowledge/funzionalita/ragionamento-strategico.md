@@ -35,6 +35,16 @@ Per una domanda strategica, Magistra dovrebbe restituire una matrice:
 - **Rischi**: punti critici e incertezze.
 - **Dati mancanti**: informazioni che l'avvocato deve verificare.
 
+## Implementazione MVP
+
+Il runtime produce un primo `scenarioPenale` quando la domanda riguarda fattispecie o scelte difensive penali:
+
+- identifica temi come patteggiamento, abbreviato, decreto penale, continuazione, prescrizione, benefici, misure cautelari e misure alternative;
+- recupera prima le norme dal database locale e, se mancano, usa il recupero online Normattiva incrementale;
+- se il caso richiede orientamenti di legittimità, importa schede pubbliche di [Cassazione penale](/fonti/cassazione-penale.md) nel database locale e le recupera come fonte distinta;
+- calcola solo input espliciti, ad esempio riduzioni aritmetiche, termine indicativo di opposizione al decreto penale e prescrizione base, sempre con avvertenza;
+- segnala dati mancanti come pena base, data del fatto, fase processuale, precedenti e orientamenti Cassazione pertinenti.
+
 ## Vincoli
 
 - Nessuna strategia senza fonti recuperate.

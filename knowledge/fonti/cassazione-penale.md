@@ -19,6 +19,17 @@ Per questo la giurisprudenza di legittimità penale non deve restare un'aggiunta
 - Supportare riti, misure cautelari, impugnazioni, esecuzione, benefici e calcolo scenari.
 - Permettere domande per [fattispecie](/glossario/fattispecie.md), non solo per numero di norma.
 
+## Implementazione MVP
+
+Il primo connector importa le schede pubbliche della pagina istituzionale `Giurisprudenza Penale` della Corte Suprema di Cassazione:
+
+- numero sentenza, sezione, data deposito e data udienza quando presenti;
+- materia, oggetto ed esito in sintesi;
+- URL della scheda ufficiale e link al PDF quando pubblicato;
+- chunk interrogabili nel database locale con fonte `Cassazione penale`.
+
+Questo non equivale ancora a un corpus completo Italgiure/Massimario. Per la pre-release il sistema usa queste schede come orientamenti verificabili e segnala quando la giurisprudenza disponibile non è sufficiente.
+
 ## Metadati minimi
 
 Ogni decisione o massima importata dovrebbe conservare:
