@@ -199,14 +199,30 @@ export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fe
         }
         throw new Error(`Download dettaglio Normattiva fallito (${response.status} ${response.statusText}): ${urn}`);
     }
-    const payload = parseNormattivaOpenDataPayload(await response.text(), urn);
-    const xml = convertiDettaglioNormattivaInAkomaNtoso(payload.atto, urn);
-    return {
-        contentType: "application/akn+xml",
-        fonte: adapter.fonte,
-        sourceUrl: creaUrlNormattivaDaUrn(urn),
-        xml
-    };
+    try {
+    try {
+        const payload = parseNormattivaOpenDataPayload(await response.text(), urn);
+        const xml = convertiDettaglioNormattivaInAkomaNtoso(payload.atto, urn);
+        return {
+            contentType: "application/akn+xml",
+            fonte: adapter.fonte,
+            sourceUrl: creaUrlNormattivaDaUrn(urn),
+            xml
+        };
+    }
+    catch (error) {
+        if (urn.includes("~art")) {
+            return await scaricaAttoNormattivaDaPaginaClassica(adapter, urn, fetchImpl, response);
+        }
+        throw error;
+    }
+}
+    catch (error) {
+        if (urn.includes("~art")) {
+            return await scaricaAttoNormattivaDaPaginaClassica(adapter, urn, fetchImpl, response);
+        }
+        throw error;
+    }
 }
 export function creaUrlNormattivaDaUrn(urn) {
     return `${NORMATTIVA_BASE_URL}/uri-res/N2Ls?${urn}`;
@@ -465,7 +481,7 @@ function parseUrnNormattiva(urn, atto) {
     };
 }
 function estraiArticoliDaHtmlNormattiva(html) {
-    const articleHeadingRegex = /<h2[^>]*class="[^"]*article-num-akn[^"]*"[^>]*>([\s\S]*?)<\/h2>/gi;
+    const articleHeadingRegex = /<h2[^>]*class=["'][^"']*article-num-akn[^"']*["'][^>]*>([\s\S]*?)<\/h2>/gi;
     const matches = [...html.matchAll(articleHeadingRegex)];
     if (matches.length === 0) {
         const articoloAttachment = estraiArticoloAttachmentDaHtmlNormattiva(html);
@@ -477,12 +493,23 @@ function estraiArticoliDaHtmlNormattiva(html) {
         const end = matches[index + 1]?.index ?? html.length;
         const segment = html.slice(start, end);
         const numero = cleanHtmlText(match[1] ?? "").replace(/^art\.?\s*/i, "");
-        const rubrica = cleanHtmlText(segment.match(/<div[^>]*class="[^"]*article-heading-akn[^"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? "");
-        let commi = [...segment.matchAll(/<span[^>]*class="[^"]*comma-num-akn[^"]*"[^>]*>([\s\S]*?)<\/span>\s*<span[^>]*class="[^"]*art_text_in_comma[^"]*"[^>]*>([\s\S]*?)<\/span>/gi)].map((commaMatch) => ({
+        const rubrica = cleanHtmlText(segment.match(/<div[^>]*class=["'][^"']*article-heading-akn[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? "");
+        let commi = [...segment.matchAll(/<span[^>]*class=["'][^"']*comma-num-akn[^"']*["'][^>]*>([\s\S]*?)<\/span>\s*<span[^>]*class=["'][^"']*art_text_in_comma[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)].map((commaMatch) => ({
             numero: cleanHtmlText(commaMatch[1] ?? "").replace(/\.$/, ""),
             testo: cleanHtmlText(commaMatch[2] ?? "")
         }));
-        const bloccoTesto = cleanHtmlText(segment.match(/<span[^>]*class="[^"]*art-just-text-akn[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? "");
+        if (commi.length === 0) {
+            const commaMarkers = [...segment.matchAll(/<span[^>]*class=["'][^"']*comma-num-akn[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)];
+            commi = commaMarkers.map((commaMatch, commaIndex) => {
+                const start = (commaMatch.index ?? 0) + commaMatch[0].length;
+                const end = commaMarkers[commaIndex + 1]?.index ?? segment.length;
+                return {
+                    numero: cleanHtmlText(commaMatch[1] ?? "").replace(/\.$/, ""),
+                    testo: cleanHtmlText(segment.slice(start, end))
+                };
+            });
+        }
+        const bloccoTesto = cleanHtmlText(segment.match(/<span[^>]*class=["'][^"']*art-just-text-akn[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? "");
         if (commi.length === 0 && bloccoTesto) {
             commi = [
                 {
@@ -500,7 +527,7 @@ function estraiArticoliDaHtmlNormattiva(html) {
         .filter((articolo) => articolo.numero && articolo.commi.length > 0);
 }
 function estraiArticoloAttachmentDaHtmlNormattiva(html) {
-    const block = html.match(/<span[^>]*class="[^"]*attachment-just-text[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
+    const block = html.match(/<span[^>]*class=["'][^"']*attachment-just-text[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1];
     if (!block) {
         return undefined;
     }
