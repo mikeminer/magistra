@@ -6,8 +6,8 @@ import { PostgresIngestJobRepository, PostgresLegalRepository, comandoUpsertSour
 import { aggregaCorporaNormativi, archiviaFontiCorpus, CODICE_PENALE_ART_5_SOURCE_URL, creaArchiviazioneOggettiDaEnv, LEGGE_392_ART_27_SOURCE_URL, LEGGE_431_ART_2_SOURCE_URL, NORMATTIVA_CODICE_PENALE_ESEMPIO_XML, NORMATTIVA_LEGGE_392_ESEMPIO_XML, NORMATTIVA_LEGGE_431_ESEMPIO_XML, parseCorpusEurLexBase, parseCorpusNormattivaEsempio, parseDocumentiAkomaNtoso } from "@italian-oss-legal-platform/ingest";
 import { creaEmbeddingProviderDaEnv } from "@italian-oss-legal-platform/llm";
 import { GazzettaUfficialeAdapter, GiurisprudenzaApertaAdapter, NormattivaAdapter, creaUrlNormattivaDaUrn, fontiCatalogabili, scaricaAttoNormattivaOpenData, scaricaDocumentoAkomaNtoso } from "@italian-oss-legal-platform/sources";
-import { creaDatabaseDaEnv } from "./status";
-export { creaDatabaseDaEnv, leggiStatoIngest, leggiStatoIngestDaEnv } from "./status";
+import { creaDatabaseDaEnv } from "./status.js";
+export { creaDatabaseDaEnv, leggiStatoIngest, leggiStatoIngestDaEnv } from "./status.js";
 const GAZZETTA_LEGGE_241_URL = "https://www.gazzettaufficiale.it/eli/id/1990/08/18/090G0294/sq";
 const GAZZETTA_LEGGE_241_FALLBACK_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
@@ -150,6 +150,96 @@ export async function eseguiSchedulerIngest(options = {}) {
         ultimoJobId: ultimoRisultato?.jobId,
         ultimoRisultato
     };
+}
+export async function eseguiRecuperoOnlineNormattiva(urns, options = {}) {
+    const env = options.env ?? process.env;
+    if (!env.DATABASE_URL) {
+        throw new Error("DATABASE_URL non configurata: impossibile importare fonti online.");
+    }
+    const database = options.database ?? (await creaDatabaseDaEnv(env));
+    const jobId = options.jobId ?? `online-recovery:${new Date().toISOString()}:${randomUUID()}`;
+    const jobRepository = new PostgresIngestJobRepository(database);
+    const urnsUniche = deduplicaValori(urns);
+    if (urnsUniche.length === 0) {
+        throw new Error("Nessun URN Normattiva indicato per il recupero online.");
+    }
+    if (options.migraPrima === true) {
+        await applicaMigrazioni(database, env);
+    }
+    await jobRepository.iniziaJob({
+        dettagli: {
+            modalita: "online-recovery",
+            urns: urnsUniche,
+            worker: "@italian-oss-legal-platform/worker"
+        },
+        fonte: "Normattiva",
+        id: jobId
+    });
+    try {
+        const adapter = new NormattivaAdapter();
+        const documenti = [];
+        for (const urn of urnsUniche) {
+            const scaricato = await scaricaAttoNormattivaOpenData(adapter, urn, options.fetch);
+            documenti.push({
+                artifactId: `normattiva:online-recovery:${hashBreve(urn)}`,
+                fonte: scaricato.fonte.nome,
+                sourceUrl: scaricato.sourceUrl,
+                stato: "vigente",
+                xml: scaricato.xml
+            });
+        }
+        const embeddingProvider = creaEmbeddingProviderDaEnv(env);
+        const corpus = parseDocumentiAkomaNtoso(documenti);
+        const chunks = await Promise.all(corpus.chunks.map(async (chunk) => ({
+            ...chunk,
+            embedding: chunk.embedding ?? (await embeddingProvider.generaEmbedding(chunk.testo))
+        })));
+        const corpusConEmbedding = {
+            ...corpus,
+            chunks
+        };
+        const storage = creaArchiviazioneOggettiDaEnv(env);
+        const artefatti = await archiviaFontiCorpus(corpusConEmbedding, storage);
+        const snapshot = creaSnapshotDatabase(corpusConEmbedding);
+        const conteggi = contaSnapshotDatabase(snapshot);
+        if (options.importaDatabase ?? true) {
+            await registraCatalogoFonti(database);
+            await registraApprovazioniPolicyFonti(database);
+            await new PostgresLegalRepository(database).upsertSnapshot(snapshot);
+            await registraSourceRuns(database, jobId, corpusConEmbedding.documentiFonte, artefatti);
+        }
+        await jobRepository.completaJob({
+            conteggi: { ...conteggi },
+            dettagli: {
+                artefattiArchiviati: artefatti.length,
+                modalita: "online-recovery",
+                providerEmbedding: embeddingProvider.nome,
+                urns: urnsUniche
+            },
+            id: jobId
+        });
+        return {
+            artefattiArchiviati: artefatti.length,
+            chunkNormativi: conteggi.chunk_normativi,
+            conteggi,
+            importatoSuDatabase: Boolean(options.importaDatabase ?? true),
+            jobId,
+            providerEmbedding: embeddingProvider.nome,
+            urns: urnsUniche
+        };
+    }
+    catch (error) {
+        await jobRepository.fallisceJob({
+            errore: error instanceof Error ? error.message : "Recupero online non gestito.",
+            id: jobId
+        });
+        throw error;
+    }
+    finally {
+        if (!options.database && database && "end" in database && typeof database.end === "function") {
+            await database.end();
+        }
+    }
 }
 export async function applicaMigrazioni(database, env = process.env) {
     const migrationsDir = resolve(env.DATABASE_MIGRATIONS_DIR ?? "packages/database/migrations");
@@ -735,6 +825,9 @@ function leggiListaEnv(value) {
         .split(/[\n;,]+/)
         .map((entry) => entry.trim())
         .filter(Boolean);
+}
+function deduplicaValori(values) {
+    return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 function leggiDettagliSorgentiNormattivaEnv(env) {
     const urls = leggiListaEnv(env.NORMATTIVA_INGEST_URLS);

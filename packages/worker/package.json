@@ -1,0 +1,24 @@
+{
+  "name": "@italian-oss-legal-platform/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./status": {
+      "types": "./dist/status.d.ts",
+      "default": "./dist/status.js"
+    }
+  },
+  "bin": {
+    "magistra-worker": "./dist/cli.js"
+  },
+  "scripts": {
+    "check": "node --check dist/index.js && node --check dist/cli.js"
+  }
+}

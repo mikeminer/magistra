@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, creaManifestoIngest, parseCorpusNormattivaEsempio } from "./index";
+import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, creaManifestoIngest, parseCorpusNormattivaEsempio } from "./index.js";
 const DEFAULT_OUTPUT = "artifacts/ingest/normattiva-corpus-esempio.json";
 async function main() {
     const options = parseArgs(process.argv.slice(2));

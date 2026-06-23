@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { contaSnapshotDatabase, type QueryableDatabase } from "@italian-oss-legal-platform/database";
 import { type FetchFonte } from "@italian-oss-legal-platform/sources";
-export { creaDatabaseDaEnv, leggiStatoIngest, leggiStatoIngestDaEnv, type StatoIngestApi } from "./status";
+export { creaDatabaseDaEnv, leggiStatoIngest, leggiStatoIngestDaEnv, type StatoIngestApi } from "./status.js";
 export interface IngestWorkerOptions {
     database?: QueryableDatabase;
     env?: NodeJS.ProcessEnv;
@@ -23,6 +23,15 @@ export interface SchedulerIngestResult {
     intervalloSecondi: number;
     ultimoJobId?: string;
     ultimoRisultato?: IngestWorkerResult;
+}
+export interface OnlineRecoveryWorkerResult {
+    artefattiArchiviati: number;
+    chunkNormativi: number;
+    conteggi: ReturnType<typeof contaSnapshotDatabase>;
+    importatoSuDatabase: boolean;
+    jobId: string;
+    providerEmbedding: string;
+    urns: string[];
 }
 export type ModalitaCorpusNormattiva = "corpus-locale" | "url-live" | "manifest-live" | "manifest-e-url-live";
 export interface DocumentoManifestoNormattiva {
@@ -65,6 +74,7 @@ export declare function eseguiIngestNormattivaLocale(options?: IngestWorkerOptio
 export declare function eseguiSchedulerIngest(options?: IngestWorkerOptions & {
     signal?: AbortSignal;
 }): Promise<SchedulerIngestResult>;
+export declare function eseguiRecuperoOnlineNormattiva(urns: string[], options?: IngestWorkerOptions): Promise<OnlineRecoveryWorkerResult>;
 export declare function applicaMigrazioni(database: QueryableDatabase, env?: NodeJS.ProcessEnv): Promise<string[]>;
 export declare function leggiSorgentiNormattiva(env?: NodeJS.ProcessEnv): Promise<SorgentiCorpusNormattiva>;
 export declare function leggiManifestoCorpusNormattiva(filePath: string): Promise<ManifestoCorpusNormattiva>;

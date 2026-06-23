@@ -24,10 +24,10 @@ La scelta di riferimento è descritta in [Scelta stack e runtime](/architettura/
 
 ## Recupero fonti mancanti
 
-Il database locale è la prima fonte. Se non produce risultati utili, l'API può attivare un recupero online incrementale: ricerca la fonte, la importa nel database, ripete il retrieval locale e solo dopo genera la risposta con LLM.
+Il database locale è la prima fonte. Se non produce risultati utili, l'API può attivare un recupero online incrementale tramite worker: pianifica la fonte, invoca o accoda il job di import, ripete il retrieval locale e solo dopo genera la risposta con LLM.
 
 La risposta finale deve essere un sunto prodotto dall'LLM a partire dalle fonti recuperate e citate. Non si risponde direttamente da risultati web non importati o non persistiti.
 
 ## Fuori dal processo API
 
-Il processo API non esegue ingest completo del corpus, parsing AKN pesante, embedding massivo o reindicizzazioni estese. Queste operazioni appartengono al worker/job runtime, così l'assistente rimane reattivo anche durante aggiornamenti o import complessi.
+Il processo API non esegue ingest completo del corpus, parsing AKN pesante, embedding massivo, import online o reindicizzazioni estese. Queste operazioni appartengono al worker/job runtime, così l'assistente rimane reattivo anche durante aggiornamenti o import complessi. Per compatibilità tecnica può esistere un fallback API esplicito e disabilitato di default, ma non è il percorso ordinario.

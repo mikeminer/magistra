@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { PostgresDocumentRepository, PostgresLegalRepository, PostgresReviewRepository, contaSnapshotDatabase, creaSnapshotDatabase } from "@italian-oss-legal-platform/database";
 import { createCitationLabel } from "@italian-oss-legal-platform/domain";
 import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "@italian-oss-legal-platform/ingest";
@@ -740,7 +742,7 @@ async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
         };
     }
     try {
-        const result = await importaUrnNormattivaNelDatabase(urns, database, env);
+        const result = await importaUrnNormattivaTramiteWorker(urns, env);
         return {
             chunkNormativi: result.chunkNormativi,
             jobId: result.jobId,
@@ -749,12 +751,77 @@ async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
         };
     }
     catch (error) {
+        if (env.ONLINE_SOURCE_RECOVERY_API_FALLBACK === "true") {
+            try {
+                const result = await importaUrnNormattivaNelDatabase(urns, database, env);
+                return {
+                    chunkNormativi: result.chunkNormativi,
+                    jobId: result.jobId,
+                    stato: result.chunkNormativi > 0 ? "riuscito" : "fallito",
+                    urns
+                };
+            }
+            catch (fallbackError) {
+                return {
+                    errore: fallbackError instanceof Error ? fallbackError.message : "Recupero online non riuscito.",
+                    stato: "fallito",
+                    urns
+                };
+            }
+        }
         return {
             errore: error instanceof Error ? error.message : "Recupero online non riuscito.",
             stato: "fallito",
             urns
         };
     }
+}
+async function importaUrnNormattivaTramiteWorker(urns, env) {
+    const workerCli = env.ONLINE_SOURCE_RECOVERY_WORKER_CLI ??
+        fileURLToPath(new URL("../../worker/dist/cli.js", import.meta.url));
+    const timeoutMs = Number(env.ONLINE_SOURCE_RECOVERY_WORKER_TIMEOUT_MS ?? 180000);
+    const output = await execFileJson(process.execPath, [
+        workerCli,
+        "recover-online",
+        ...urns
+    ], {
+        cwd: env.MAGISTRA_RUNTIME_ROOT || process.cwd(),
+        env: {
+            ...process.env,
+            ...env,
+            ONLINE_RECOVERY_URNS: JSON.stringify(urns),
+            WORKER_IMPORT_DATABASE: "true",
+            WORKER_MIGRATE_BEFORE_ONLINE_RECOVERY: env.WORKER_MIGRATE_BEFORE_ONLINE_RECOVERY ?? "false"
+        },
+        timeoutMs
+    });
+    return {
+        chunkNormativi: Number(output.chunkNormativi ?? output.conteggi?.chunk_normativi ?? 0),
+        jobId: String(output.jobId ?? "")
+    };
+}
+async function execFileJson(file, args, options) {
+    const stdout = await new Promise((resolve, reject) => {
+        execFile(file, args, {
+            cwd: options.cwd,
+            env: options.env,
+            maxBuffer: 20 * 1024 * 1024,
+            timeout: options.timeoutMs,
+            windowsHide: true
+        }, (error, stdoutValue, stderrValue) => {
+            if (error) {
+                const detail = stderrValue?.toString().trim();
+                reject(new Error(detail ? `${error.message}: ${detail}` : error.message));
+                return;
+            }
+            resolve(stdoutValue.toString());
+        });
+    });
+    const jsonStart = stdout.indexOf("{");
+    if (jsonStart === -1) {
+        throw new Error("Worker recupero online non ha restituito JSON.");
+    }
+    return JSON.parse(stdout.slice(jsonStart));
 }
 async function importaUrnNormattivaNelDatabase(urns, database, env) {
     const jobId = `online-recovery:${new Date().toISOString()}:${randomUUID()}`;

@@ -1086,4 +1086,4 @@ function toActType(value) {
     }
     return "altro";
 }
-export * from "./storage";
+export * from "./storage.js";

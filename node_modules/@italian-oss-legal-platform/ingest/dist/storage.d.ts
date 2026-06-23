@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type { CorpusNormativo } from "./index";
+import type { CorpusNormativo } from "./index.js";
 export interface OggettoArchiviato {
     bucket?: string;
     chiave: string;

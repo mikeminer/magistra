@@ -26,7 +26,7 @@ La scelta TypeScript-first non implica un unico processo. Magistra deve restare 
 
 - **Frontend**: interfaccia React/Next.js, usata sia nel browser sia dentro la shell desktop.
 - **API / RAG runtime**: richieste realtime, orchestrazione del retrieval, costruzione del contesto, chiamate LLM e gestione dei documenti utente.
-- **Worker / job runtime**: import normativo, aggiornamenti del corpus, chunking, embedding, reindicizzazione e job lunghi.
+- **Worker / job runtime**: import normativo, recupero online incrementale, aggiornamenti del corpus, chunking, embedding, reindicizzazione e job lunghi.
 - **PostgreSQL + pgvector**: source of truth per corpus normativo, metadati, chunk e ricerca vettoriale.
 - **Object storage opzionale**: documenti caricati dall'utente e allegati pesanti.
 
@@ -34,7 +34,7 @@ Questa separazione non è una scelta di microservizi. È una regola di affidabil
 
 ## Regola anti-bottleneck
 
-L'API non esegue ingest completo, parsing pesante o reindicizzazione estesa nel processo che serve le richieste utente. Può pianificare, accodare e osservare job, ma il lavoro batch vive nel worker.
+L'API non esegue ingest completo, parsing pesante, import online o reindicizzazione estesa nel processo che serve le richieste utente. Può pianificare, invocare, accodare e osservare job, ma il lavoro batch vive nel worker.
 
 Questo vale indipendentemente dal linguaggio: un monolite Node o Python con chat e ingest nello stesso processo avrebbe lo stesso rischio. Il requisito reale è separare il runtime realtime dal runtime batch.
 

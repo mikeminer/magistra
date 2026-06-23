@@ -46,7 +46,7 @@ Se `DATABASE_URL` non e' configurato, la desktop app prova ad avviare un runtime
 - Avvio automatico del servizio locale incluso nell'app.
 - Bootstrap database locale con schema PostgreSQL/pgvector.
 - Restore automatico dello snapshot `magistra-corpus.sql` quando presente nel bundle.
-- Worker separato per bootstrap o job schedulati, senza bloccare il processo API/chat.
+- Worker separato per bootstrap, job schedulati e recupero online incrementale, senza bloccare il processo API/chat.
 - Chat legale con risposte basate sulle fonti recuperate.
 - Citazioni verificabili con riferimento a fonte, articolo e comma quando disponibili.
 - Ricerca sul database locale prima di qualunque recupero online.
@@ -65,8 +65,8 @@ Se `DATABASE_URL` non e' configurato, la desktop app prova ad avviare un runtime
 5. Se il database locale e' vuoto e non c'e' snapshot, un worker separato puo' eseguire un bootstrap iniziale.
 6. In background viene avviato il servizio web locale su una porta libera di `127.0.0.1`.
 7. La chat interroga prima il database locale.
-8. Se non trova fonti sufficienti, prova il recupero online da Normattiva.
-9. Le fonti recuperate vengono importate e indicizzate.
+8. Se non trova fonti sufficienti, l'API invoca il worker per il recupero online da Normattiva.
+9. Le fonti recuperate vengono importate e indicizzate dal worker.
 10. Il sistema rilancia la ricerca sulle fonti disponibili.
 11. Il LLM genera un sunto citando le fonti usate.
 

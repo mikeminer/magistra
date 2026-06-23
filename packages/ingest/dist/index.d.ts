@@ -101,5 +101,5 @@ export declare function parseAkomaNtosoDocument(xml: string, options?: ParseAkom
 export declare function creaManifestoIngest(corpus: CorpusNormativo, generatoIl?: string): ManifestoIngest;
 export declare function normalizzaTestoGiuridico(input: string): string;
 export declare function aggregaCorporaNormativi(corpora: CorpusNormativo[]): CorpusNormativo;
-export * from "./storage";
+export * from "./storage.js";
 //# sourceMappingURL=index.d.ts.map

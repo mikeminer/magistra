@@ -1,0 +1,9 @@
+{
+  "name": "@italian-oss-legal-platform/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "next start"
+  }
+}

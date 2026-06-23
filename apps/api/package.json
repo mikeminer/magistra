@@ -1,0 +1,11 @@
+{
+  "name": "@italian-oss-legal-platform/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "scripts": {
+    "check": "node --check dist/server.js"
+  }
+}
