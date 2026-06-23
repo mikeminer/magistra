@@ -1,6 +1,6 @@
 # Magistra per Windows - Pre-release
 
-Magistra e' una app desktop per Windows che porta l'MVP della piattaforma Magistra in una finestra nativa. L'app avvia localmente il servizio web incluso nell'installer, prepara il database locale quando disponibile e apre l'interfaccia di chat, ricerca normativa e consultazione delle fonti.
+Magistra e' una app desktop per Windows che porta l'MVP della piattaforma Magistra in una finestra nativa. L'app avvia localmente il servizio web incluso nell'installer, prepara un database locale PGlite e apre l'interfaccia di chat, ricerca normativa e consultazione delle fonti.
 
 Questa pre-release e' pensata per test tecnici, demo controllate e raccolta feedback. Non e' ancora una versione stabile di produzione.
 
@@ -25,28 +25,26 @@ Questa pre-release e' pensata per test tecnici, demo controllate e raccolta feed
 - Windows 11 a 64 bit.
 - 16 GB di RAM.
 - SSD con almeno 2 GB liberi.
-- Runtime PostgreSQL locale con `pgvector` incluso nell'installer o disponibile sul sistema.
 - Ollama installato e raggiungibile su `http://127.0.0.1:11434`.
 - Modello locale `llama3.2:latest` disponibile in Ollama, oppure configurazione LLM equivalente.
 
 ### Componenti esterni per l'esperienza completa
 
-L'installer include l'app desktop, la build web di Magistra, lo schema database e lo slot per un corpus pre-ingestato. La modalita' completa RAG locale richiede:
+L'installer include l'app desktop, la build web di Magistra, PGlite, lo schema database e lo slot per un corpus pre-ingestato. La modalita' completa RAG locale richiede:
 
-- un database PostgreSQL/pgvector locale, portabile o esterno;
 - uno snapshot del corpus pre-ingestato incluso in `resources/magistra-runtime/snapshots`;
 - un provider LLM locale o compatibile;
 - accesso internet per recuperare fonti online mancanti.
 
-Se `DATABASE_URL` non e' configurato, la desktop app prova ad avviare un runtime PostgreSQL portabile incluso nel bundle. Se il runtime portabile non e' presente, prova a rilevare il container Docker `italian-oss-legal-platform-postgres-1` come fallback tecnico. Se nessun database e' disponibile, alcune funzioni possono lavorare in modalita' ridotta o non trovare fonti sufficienti. Se il modello LLM non e' raggiungibile, la generazione della risposta puo' fallire.
+Se `DATABASE_URL` non e' configurato, la desktop app usa PGlite in una cartella locale dell'utente e importa automaticamente lo snapshot `magistra-corpus.sql` quando presente nel bundle. PostgreSQL/pgvector resta supportato per ambienti managed, self-hosted o test avanzati tramite `DATABASE_URL` o `MAGISTRA_DESKTOP_DB_MODE=portable-postgres`. Se il modello LLM non e' raggiungibile, la generazione della risposta puo' fallire.
 
 ## Feature incluse
 
 - App desktop Windows con finestra dedicata per Magistra.
 - Avvio automatico del servizio locale incluso nell'app.
-- Bootstrap database locale con schema PostgreSQL/pgvector.
+- Bootstrap database locale con PGlite.
 - Restore automatico dello snapshot `magistra-corpus.sql` quando presente nel bundle.
-- Worker separato per bootstrap, job schedulati e recupero online incrementale, senza bloccare il processo API/chat.
+- Worker separato per bootstrap e job schedulati negli ambienti server/managed.
 - Chat legale con risposte basate sulle fonti recuperate.
 - Citazioni verificabili con riferimento a fonte, articolo e comma quando disponibili.
 - Ricerca sul database locale prima di qualunque recupero online.
@@ -60,13 +58,13 @@ Se `DATABASE_URL` non e' configurato, la desktop app prova ad avviare un runtime
 
 1. L'utente avvia Magistra dal collegamento desktop o Start Menu.
 2. L'app desktop apre una finestra Windows.
-3. Se non e' gia' configurato un database, l'app prova ad avviare PostgreSQL portabile dal bundle.
+3. Se non e' gia' configurato un database esterno, l'app prepara PGlite nella cartella dati utente.
 4. Il database viene inizializzato con `schema.sql` e, se presente, con lo snapshot `magistra-corpus.sql`.
-5. Se il database locale e' vuoto e non c'e' snapshot, un worker separato puo' eseguire un bootstrap iniziale.
+5. Se il database locale e' vuoto e non c'e' snapshot, il recupero online incrementale puo' importare le fonti mancanti su richiesta.
 6. In background viene avviato il servizio web locale su una porta libera di `127.0.0.1`.
 7. La chat interroga prima il database locale.
-8. Se non trova fonti sufficienti, l'API invoca il worker per il recupero online da Normattiva.
-9. Le fonti recuperate vengono importate e indicizzate dal worker.
+8. Se non trova fonti sufficienti, il sistema recupera online da Normattiva gli atti pianificabili dalla domanda.
+9. Le fonti recuperate vengono importate e indicizzate nel database locale.
 10. Il sistema rilancia la ricerca sulle fonti disponibili.
 11. Il LLM genera un sunto citando le fonti usate.
 
@@ -91,14 +89,14 @@ Se `pg_dump` non e' disponibile sul sistema ma il container PostgreSQL del proge
 - Magistra e' uno strumento informativo: non fornisce consulenza legale e non sostituisce un professionista abilitato.
 - La qualita' delle risposte dipende dalle fonti presenti nel database, dalla riuscita dell'import online e dal modello LLM configurato.
 - Le funzionalita' di import online richiedono connettivita' verso le fonti ufficiali.
-- Per un installer completamente autonomo bisogna includere in `desktop/postgres/` un runtime PostgreSQL Windows x64 con `pgvector` prima della build.
+- PostgreSQL/pgvector non e' richiesto per la desktop app OSS standard; resta una modalita' avanzata per test o managed.
 - La configurazione locale del database e del modello puo' variare tra ambienti di test.
 
 ## Troubleshooting rapido
 
 - Se l'app si apre ma non risponde: verificare che non ci siano firewall o antivirus che bloccano il servizio locale su `127.0.0.1`.
 - Se le risposte LLM falliscono: verificare che Ollama sia avviato e che `http://127.0.0.1:11434/v1` sia raggiungibile.
-- Se non vengono trovate fonti: verificare che PostgreSQL/pgvector sia attivo, che lo snapshot sia stato ripristinato e che il database locale sia popolato.
+- Se non vengono trovate fonti: verificare che lo snapshot sia stato ripristinato, che il database locale sia popolato e che l'import online possa raggiungere Normattiva.
 - Se l'import online fallisce: verificare la connessione internet e la raggiungibilita' di Normattiva.
 - I log desktop si trovano in `%APPDATA%\magistra-desktop\logs`.
 

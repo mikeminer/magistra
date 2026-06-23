@@ -1,7 +1,8 @@
 import { fontiCatalogabili } from "../../sources/dist/index.js";
+import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 export async function leggiStatoIngestDaEnv(env = process.env) {
-    if (!env.DATABASE_URL) {
+    if (!databaseConfigurato(env)) {
         return {
             catalogoFonti: arricchisciCatalogoFonti(new Map(), false),
             database: "non-configurato",
@@ -177,15 +178,67 @@ function errorePiuRecenteDellUltimaAcquisizione(fallitoIl, ultimoAggiornamento) 
     return new Date(fallitoIl).getTime() > new Date(ultimoAggiornamento).getTime();
 }
 export async function creaDatabaseDaEnv(env = process.env) {
-    const connectionString = env.DATABASE_URL;
-    if (!connectionString) {
-        throw new Error("DATABASE_URL non configurata.");
+    const driver = databaseDriverDaEnv(env);
+    if (driver === "pglite") {
+        return creaPgliteDatabaseDaEnv(env);
     }
+    if (driver === "none") {
+        throw new Error("Database non configurato: impostare DATABASE_URL o MAGISTRA_DB_DRIVER=pglite.");
+    }
+    const connectionString = env.DATABASE_URL;
     const client = new pg.Client({
         connectionString
     });
     await client.connect();
     return client;
+}
+export function databaseConfigurato(env = process.env) {
+    return databaseDriverDaEnv(env) !== "none";
+}
+export function databaseDriverDaEnv(env = process.env) {
+    const driver = String(env.MAGISTRA_DB_DRIVER ?? env.DATABASE_DRIVER ?? "").toLowerCase();
+    if (driver === "pglite" || env.PGLITE_DATA_DIR || env.MAGISTRA_PGLITE_DATA_DIR) {
+        return "pglite";
+    }
+    if (env.DATABASE_URL) {
+        return "postgres";
+    }
+    return "none";
+}
+export function isPgliteDatabase(database) {
+    return Boolean(database &&
+        typeof database === "object" &&
+        database.magistraDriver === "pglite");
+}
+async function creaPgliteDatabaseDaEnv(env) {
+    const dataDir = env.PGLITE_DATA_DIR ?? env.MAGISTRA_PGLITE_DATA_DIR;
+    const client = dataDir ? new PGlite(dataDir) : new PGlite();
+    return new PgliteQueryableDatabase(client, dataDir);
+}
+class PgliteQueryableDatabase {
+    client;
+    dataDir;
+    magistraDriver = "pglite";
+    constructor(client, dataDir) {
+        this.client = client;
+        this.dataDir = dataDir;
+    }
+    async query(text, values = []) {
+        return this.client.query(normalizzaSqlPerPglite(text), [...values]);
+    }
+    async exec(text) {
+        return this.client.exec(normalizzaSqlPerPglite(text));
+    }
+    async end() {
+        await this.client.close?.();
+    }
+}
+export function normalizzaSqlPerPglite(text) {
+    return text
+        .replace(/create\s+extension\s+if\s+not\s+exists\s+vector\s*;?/gi, "")
+        .replace(/\bembedding\s+vector\s*\(\s*\d+\s*\)/gi, "embedding text")
+        .replace(/::\s*vector\b/gi, "")
+        .replace(/\bpublic\./g, "");
 }
 function asRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)

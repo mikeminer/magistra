@@ -27,7 +27,7 @@ La scelta TypeScript-first non implica un unico processo. Magistra deve restare 
 - **Frontend**: interfaccia React/Next.js, usata sia nel browser sia dentro la shell desktop.
 - **API / RAG runtime**: richieste realtime, orchestrazione del retrieval, costruzione del contesto, chiamate LLM e gestione dei documenti utente.
 - **Worker / job runtime**: import normativo, recupero online incrementale, aggiornamenti del corpus, chunking, embedding, reindicizzazione e job lunghi.
-- **PostgreSQL + pgvector**: source of truth per corpus normativo, metadati, chunk e ricerca vettoriale.
+- **Database runtime astratto**: PostgreSQL + pgvector per managed/self-hosted server; PGlite per la desktop app OSS.
 - **Object storage opzionale**: documenti caricati dall'utente e allegati pesanti.
 
 Questa separazione non è una scelta di microservizi. È una regola di affidabilità: il processo che risponde alla chat non deve condividere memoria, event loop e ciclo di vita con un ingest pesante o con un file AKN malformato.
@@ -38,9 +38,18 @@ L'API non esegue ingest completo, parsing pesante, import online o reindicizzazi
 
 Questo vale indipendentemente dal linguaggio: un monolite Node o Python con chat e ingest nello stesso processo avrebbe lo stesso rischio. Il requisito reale è separare il runtime realtime dal runtime batch.
 
+## Database runtime
+
+Il core applicativo non deve dipendere direttamente da un singolo motore database. Deve parlare con un contratto minimo `query(text, values)` e scegliere il driver dal runtime:
+
+- `DATABASE_URL` abilita PostgreSQL, indicato per managed, self-hosted e ambienti con `pgvector`.
+- `MAGISTRA_DB_DRIVER=pglite` con `PGLITE_DATA_DIR` abilita PGlite, indicato per la desktop app OSS senza Docker.
+- Lo schema resta relazionale; in PGlite l'embedding viene salvato in formato testuale compatibile e la similarita' viene calcolata nel runtime TypeScript.
+- Il recupero online incrementale importa sempre le fonti nel database scelto prima di rilanciare il retrieval.
+
 ## Corpus e desktop app
 
-L'utente finale non dovrebbe installare Magistra e re-ingestare tutto il corpus normativo italiano sul proprio device. Il corpus principale viene preparato dai maintainer come parte della pipeline di release e distribuito come database già popolato o snapshot verificabile.
+L'utente finale non dovrebbe installare Magistra e re-ingestare tutto il corpus normativo italiano sul proprio device. Il corpus principale viene preparato dai maintainer come parte della pipeline di release e distribuito come database già popolato o snapshot verificabile. Nella build desktop OSS il default e' PGlite locale inizializzato dallo snapshot; PostgreSQL portabile resta una modalita' opzionale o di compatibilita'.
 
 La desktop app diventa quindi un bundle di prodotto, non un semplice client:
 
@@ -78,5 +87,5 @@ In quel caso il componente deve avere contratti espliciti, test e confini operat
 
 - Formato di distribuzione del database pre-ingestato per la desktop app.
 - Canale di aggiornamento del corpus e strategia di firma/verifica degli snapshot.
-- Packaging locale di PostgreSQL/pgvector nella versione desktop.
+- Eventuale packaging locale di PostgreSQL/pgvector come modalita' avanzata alternativa a PGlite.
 - Separazione fisica dei package TS: stesso package con entrypoint diversi o workspace distinti per frontend, API e worker.

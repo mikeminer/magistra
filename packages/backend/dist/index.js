@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 import { PostgresDocumentRepository, PostgresLegalRepository, PostgresReviewRepository, contaSnapshotDatabase, creaSnapshotDatabase } from "../../database/dist/index.js";
 import { createCitationLabel } from "../../domain/dist/index.js";
 import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "../../ingest/dist/index.js";
-import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv } from "../../llm/dist/index.js";
+import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv, similaritaCoseno } from "../../llm/dist/index.js";
 import { getCorpusDimostrativo, rispondiConFontiRag } from "../../retrieval/dist/index.js";
 import { NormattivaAdapter, scaricaAttoNormattivaOpenData } from "../../sources/dist/index.js";
-import { creaDatabaseDaEnv } from "../../worker/dist/status.js";
+import { creaDatabaseDaEnv, databaseConfigurato, isPgliteDatabase } from "../../worker/dist/status.js";
 export async function rispondiConFonti(domanda, env = process.env) {
     const rispostaDatabase = await rispondiConFontiDatabase(domanda, env);
     return rispostaDatabase ?? (await rispondiConFontiRag(domanda, {
@@ -16,7 +16,7 @@ export async function rispondiConFonti(domanda, env = process.env) {
     }));
 }
 export async function rispondiConFontiDatabase(domanda, env = process.env) {
-    if (!env.DATABASE_URL) {
+    if (!databaseConfigurato(env)) {
         return null;
     }
     const database = await creaDatabaseDaEnv(env);
@@ -720,14 +720,19 @@ async function cercaChunkDatabase(domanda, database, env) {
         }
     }
     const riferimento = riferimentiEspliciti[0] ?? estraiRiferimentoDomanda(domanda);
-    let query = creaQueryChunkDatabase(embedding, riferimento);
+    let query = isPgliteDatabase(database)
+        ? creaQueryChunkDatabaseCompatibile(riferimento)
+        : creaQueryChunkDatabase(embedding, riferimento);
     let result = (await database.query(query.text, query.values));
     if (query.filtroStrutturato && (result.rows?.length ?? 0) === 0) {
         return [];
     }
+    const rows = isPgliteDatabase(database)
+        ? ordinaChunkCompatibiliPerEmbedding(result.rows ?? [], embedding).slice(0, 80)
+        : (result.rows ?? []);
     const tokensDomanda = tokenizza(domanda);
     const dominioGiuridico = query.filtroStrutturato || haSegnaliGiuridici(tokensDomanda);
-    const ranked = (result.rows ?? [])
+    const ranked = rows
         .map((row) => formattaRisultatoDatabase(row, domanda, tokensDomanda, riferimento))
         .filter((resultItem) => superaRilevanzaMinimaDatabase(resultItem, query.filtroStrutturato, riferimento, dominioGiuridico))
         .sort((left, right) => right.punteggio - left.punteggio);
@@ -743,10 +748,15 @@ async function cercaChunkDatabasePerRiferimenti(domanda, database, embedding, ri
     const tokensDomanda = tokenizza(domanda);
     const risultatiPerId = new Map();
     for (const riferimento of riferimenti.slice(0, 12)) {
-        const query = creaQueryChunkDatabase(embedding, riferimento);
+        const query = isPgliteDatabase(database)
+            ? creaQueryChunkDatabaseCompatibile(riferimento)
+            : creaQueryChunkDatabase(embedding, riferimento);
         const result = (await database.query(query.text, query.values));
+        const rows = isPgliteDatabase(database)
+            ? ordinaChunkCompatibiliPerEmbedding(result.rows ?? [], embedding).slice(0, 80)
+            : (result.rows ?? []);
         const quota = riferimento.comma ? 2 : 3;
-        const ranked = (result.rows ?? [])
+        const ranked = rows
             .map((row) => formattaRisultatoDatabase(row, domanda, tokensDomanda, riferimento))
             .filter((resultItem) => metadatiSoddisfanoRiferimento(resultItem.metadati, riferimento))
             .sort((left, right) => right.punteggio - left.punteggio)
@@ -774,6 +784,15 @@ async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
         };
     }
     try {
+        if (isPgliteDatabase(database)) {
+            const result = await importaUrnNormattivaNelDatabase(urns, database, env);
+            return {
+                chunkNormativi: result.chunkNormativi,
+                jobId: result.jobId,
+                stato: result.chunkNormativi > 0 ? "riuscito" : "fallito",
+                urns
+            };
+        }
         const result = await importaUrnNormattivaTramiteWorker(urns, env);
         return {
             chunkNormativi: result.chunkNormativi,
@@ -1262,6 +1281,59 @@ function superaRilevanzaMinimaDatabase(resultItem, filtroStrutturato, riferiment
 function creaQueryChunkDatabase(embedding, riferimento) {
     const values = [toPgVector(embedding)];
     const where = ["embedding is not null"];
+    aggiungiFiltriRiferimentoChunk(values, where, riferimento);
+    return {
+        filtroStrutturato: where.length > 1,
+        text: `select id,
+  testo,
+  artefatto_fonte_id,
+  citation_eli,
+  citation_fonte,
+  citation_tipo_atto,
+  citation_numero_atto,
+  citation_data_atto,
+  citation_articolo,
+  citation_comma,
+  citation_vigenza_da,
+  citation_vigenza_a,
+  citation_url_fonte,
+  1 - (embedding <=> $1::vector) as punteggio_semantico
+from chunk_normativi
+where ${where.join("\n  and ")}
+order by embedding <=> $1::vector
+limit 80`,
+        values
+    };
+}
+function creaQueryChunkDatabaseCompatibile(riferimento) {
+    const values = [];
+    const where = ["embedding is not null"];
+    aggiungiFiltriRiferimentoChunk(values, where, riferimento);
+    return {
+        filtroStrutturato: where.length > 1,
+        text: `select id,
+  testo,
+  embedding,
+  artefatto_fonte_id,
+  citation_eli,
+  citation_fonte,
+  citation_tipo_atto,
+  citation_numero_atto,
+  citation_data_atto,
+  citation_articolo,
+  citation_comma,
+  citation_vigenza_da,
+  citation_vigenza_a,
+  citation_url_fonte,
+  0 as punteggio_semantico
+from chunk_normativi
+where ${where.join("\n  and ")}
+order by citation_fonte, citation_tipo_atto, citation_numero_atto, citation_articolo, citation_comma nulls first, id
+limit 2000`,
+        values
+    };
+}
+function aggiungiFiltriRiferimentoChunk(values, where, riferimento) {
     if (riferimento?.fonte) {
         values.push(riferimento.fonte);
         where.push(`citation_fonte = $${values.length}`);
@@ -1288,28 +1360,35 @@ function creaQueryChunkDatabase(embedding, riferimento) {
         values.push(riferimento.comma);
         where.push(`lower(coalesce(citation_comma, '')) = lower($${values.length})`);
     }
-    return {
-        filtroStrutturato: where.length > 1,
-        text: `select id,
-  testo,
-  artefatto_fonte_id,
-  citation_eli,
-  citation_fonte,
-  citation_tipo_atto,
-  citation_numero_atto,
-  citation_data_atto,
-  citation_articolo,
-  citation_comma,
-  citation_vigenza_da,
-  citation_vigenza_a,
-  citation_url_fonte,
-  1 - (embedding <=> $1::vector) as punteggio_semantico
-from chunk_normativi
-where ${where.join("\n  and ")}
-order by embedding <=> $1::vector
-limit 80`,
-        values
-    };
+}
+function ordinaChunkCompatibiliPerEmbedding(rows, embeddingDomanda) {
+    return rows
+        .map((row) => ({
+        ...row,
+        punteggio_semantico: calcolaSimilaritaEmbeddingCompatibile(embeddingDomanda, row.embedding)
+    }))
+        .sort((left, right) => Number(right.punteggio_semantico ?? 0) - Number(left.punteggio_semantico ?? 0));
+}
+function calcolaSimilaritaEmbeddingCompatibile(embeddingDomanda, embeddingRow) {
+    const embedding = parseEmbeddingCompatibile(embeddingRow);
+    if (!embedding || embedding.length === 0) {
+        return 0;
+    }
+    return Math.max(0, similaritaCoseno(embeddingDomanda, embedding));
+}
+function parseEmbeddingCompatibile(value) {
+    if (Array.isArray(value)) {
+        return value.map((item) => Number(item)).filter((item) => Number.isFinite(item));
+    }
+    if (typeof value !== "string") {
+        return undefined;
+    }
+    const normalized = value.trim().replace(/^\[/, "").replace(/\]$/, "");
+    if (!normalized) {
+        return undefined;
+    }
+    const embedding = normalized.split(",").map((item) => Number(item.trim()));
+    return embedding.every((item) => Number.isFinite(item)) ? embedding : undefined;
 }
 function formattaRisultatoDatabase(row, domanda, tokensDomanda, riferimento) {
     const metadati = citationMetadataFromRow(row);

@@ -21,7 +21,7 @@ import {
   scaricaAttoNormattivaOpenData,
   type FetchFonte
 } from "@italian-oss-legal-platform/sources";
-import { creaDatabaseDaEnv } from "../dist/status.js";
+import { creaDatabaseDaEnv, databaseConfigurato } from "../dist/status.js";
 import { applicaMigrazioni } from "../dist/index.js";
 
 export interface OnlineRecoveryWorkerOptions {
@@ -38,8 +38,8 @@ export async function eseguiRecuperoOnlineNormattiva(
   options: OnlineRecoveryWorkerOptions = {}
 ) {
   const env = options.env ?? process.env;
-  if (!env.DATABASE_URL) {
-    throw new Error("DATABASE_URL non configurata: impossibile importare fonti online.");
+  if (!databaseConfigurato(env)) {
+    throw new Error("Database non configurato: impossibile importare fonti online.");
   }
 
   const database = options.database ?? (await creaDatabaseDaEnv(env));

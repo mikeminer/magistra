@@ -178,6 +178,172 @@ function countLocalChunks(tools, connection) {
   }
 }
 
+function normalizeSqlForPglite(sql) {
+  return sql
+    .replace(/create\s+extension\s+if\s+not\s+exists\s+vector\s*;?/gi, "")
+    .replace(/\bembedding\s+vector\s*\(\s*\d+\s*\)/gi, "embedding text")
+    .replace(/::\s*vector\b/gi, "")
+    .replace(/\bpublic\./g, "");
+}
+
+function pgliteDataDir(env) {
+  return env.PGLITE_DATA_DIR ||
+    env.MAGISTRA_PGLITE_DATA_DIR ||
+    process.env.PGLITE_DATA_DIR ||
+    process.env.MAGISTRA_PGLITE_DATA_DIR ||
+    path.join(app.getPath("userData"), "pglite-data");
+}
+
+async function createPgliteDatabase(dataDir) {
+  const { PGlite } = await import("@electric-sql/pglite");
+  return new PGlite(dataDir);
+}
+
+async function applyPgliteSchema(root, database) {
+  const filePath = schemaPath(root);
+  if (!filePath) {
+    appendLog("pglite.log", "schema.sql non trovato: salto bootstrap schema");
+    return;
+  }
+  await database.exec(normalizeSqlForPglite(fs.readFileSync(filePath, "utf8")));
+}
+
+function parseCopyHeader(line) {
+  const match = line.match(/^COPY\s+(?:public\.)?([A-Za-z_][A-Za-z0-9_]*)\s+\(([^)]+)\)\s+FROM\s+stdin;$/i);
+  if (!match) {
+    return undefined;
+  }
+  const columns = match[2].split(",").map((column) => column.trim().replace(/^"|"$/g, ""));
+  if (!columns.every((column) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(column))) {
+    throw new Error(`Colonne COPY non valide per ${match[1]}`);
+  }
+  return {
+    columns,
+    table: match[1]
+  };
+}
+
+function decodeCopyValue(value, column) {
+  if (value === "\\N") {
+    return null;
+  }
+  if (column === "target_risolto") {
+    return value === "t" || value === "true";
+  }
+  return value.replace(/\\([\\bfnrtv])/g, (_match, char) => {
+    if (char === "\\") {
+      return "\\";
+    }
+    if (char === "b") {
+      return "\b";
+    }
+    if (char === "f") {
+      return "\f";
+    }
+    if (char === "n") {
+      return "\n";
+    }
+    if (char === "r") {
+      return "\r";
+    }
+    if (char === "t") {
+      return "\t";
+    }
+    if (char === "v") {
+      return "\v";
+    }
+    return char;
+  }).replace(/\\([0-7]{3})/g, (_match, octal) => String.fromCharCode(Number.parseInt(octal, 8)));
+}
+
+async function restorePgliteCopyDump(database, dumpSql) {
+  const lines = dumpSql.split(/\r?\n/);
+  let restoredRows = 0;
+  await database.query("begin");
+  try {
+    for (let index = 0; index < lines.length; index += 1) {
+      const header = parseCopyHeader(lines[index]);
+      if (!header) {
+        continue;
+      }
+      const placeholders = header.columns.map((_column, columnIndex) => `$${columnIndex + 1}`).join(", ");
+      const columnList = header.columns.join(", ");
+      const insertSql = `insert into ${header.table} (${columnList}) values (${placeholders}) on conflict do nothing`;
+      for (index += 1; index < lines.length && lines[index] !== "\\."; index += 1) {
+        if (lines[index].length === 0) {
+          continue;
+        }
+        const values = lines[index].split("\t").map((value, valueIndex) => decodeCopyValue(value, header.columns[valueIndex]));
+        await database.query(insertSql, values);
+        restoredRows += 1;
+      }
+    }
+    await database.query("commit");
+  }
+  catch (error) {
+    await database.query("rollback");
+    throw error;
+  }
+  return restoredRows;
+}
+
+async function restorePgliteBundledSnapshot(root, database, env) {
+  const filePath = snapshotPath(root, env);
+  if (!filePath) {
+    appendLog("pglite.log", "snapshot corpus non trovato: avvio senza restore snapshot");
+    return false;
+  }
+  const digest = hashFile(filePath);
+  const marker = path.join(app.getPath("userData"), `snapshot-${digest}.pglite.restored`);
+  if (fs.existsSync(marker)) {
+    appendLog("pglite.log", `snapshot gia' ripristinato in PGlite: ${path.basename(filePath)}`);
+    return false;
+  }
+  const restoredRows = await restorePgliteCopyDump(database, fs.readFileSync(filePath, "utf8"));
+  fs.writeFileSync(marker, new Date().toISOString(), "utf8");
+  appendLog("pglite.log", `snapshot ripristinato in PGlite: ${filePath}; righe=${restoredRows}`);
+  return true;
+}
+
+async function countPgliteChunks(database) {
+  try {
+    const result = await database.query("select count(*)::int as count from chunk_normativi");
+    return Number(result.rows?.[0]?.count ?? 0);
+  }
+  catch (error) {
+    appendLog("pglite.log", `conteggio chunk non disponibile: ${error.message}`);
+    return 0;
+  }
+}
+
+async function startPgliteDatabase(root, env) {
+  const mode = String(env.MAGISTRA_DESKTOP_DB_MODE || process.env.MAGISTRA_DESKTOP_DB_MODE || "pglite").toLowerCase();
+  if (mode === "external" || mode === "portable-postgres" || mode === "postgres") {
+    return undefined;
+  }
+  const dataDir = pgliteDataDir(env);
+  fs.mkdirSync(dataDir, { recursive: true });
+  let database;
+  try {
+    database = await createPgliteDatabase(dataDir);
+    await applyPgliteSchema(root, database);
+    const restoredSnapshot = await restorePgliteBundledSnapshot(root, database, env);
+    const chunkCount = await countPgliteChunks(database);
+    return {
+      chunkCount,
+      dataDir,
+      restoredSnapshot
+    };
+  }
+  catch (error) {
+    appendLog("pglite.log", `bootstrap PGlite non riuscito: ${error.message}`);
+    return undefined;
+  }
+  finally {
+    await database?.close?.();
+  }
+}
+
 async function startPortablePostgres(root, env) {
   if ((env.MAGISTRA_DESKTOP_DB_MODE || process.env.MAGISTRA_DESKTOP_DB_MODE) === "external") {
     return undefined;
@@ -348,7 +514,11 @@ async function buildServerEnv(root, port) {
   const storageDir = path.join(app.getPath("userData"), "storage");
   fs.mkdirSync(storageDir, { recursive: true });
   const certPath = path.join(root, "certs", "local-ca.pem");
-  const portableDatabase = !process.env.DATABASE_URL && !fileEnv.DATABASE_URL
+  const hasConfiguredDatabaseUrl = Boolean(process.env.DATABASE_URL || fileEnv.DATABASE_URL);
+  const pgliteDatabase = !hasConfiguredDatabaseUrl
+    ? await startPgliteDatabase(root, fileEnv)
+    : undefined;
+  const portableDatabase = !hasConfiguredDatabaseUrl && !pgliteDatabase
     ? await startPortablePostgres(root, fileEnv)
     : undefined;
   const env = {
@@ -373,7 +543,14 @@ async function buildServerEnv(root, port) {
     env.MAGISTRA_DESKTOP_DB_KIND = "portable-postgres";
     env.MAGISTRA_DESKTOP_DB_CHUNKS = String(portableDatabase.chunkCount);
   }
-  if (!env.DATABASE_URL) {
+  if (pgliteDatabase?.dataDir) {
+    env.MAGISTRA_DB_DRIVER = "pglite";
+    env.PGLITE_DATA_DIR = pgliteDatabase.dataDir;
+    env.MAGISTRA_DESKTOP_DB_KIND = "pglite";
+    env.MAGISTRA_DESKTOP_DB_CHUNKS = String(pgliteDatabase.chunkCount);
+    env.ONLINE_SOURCE_RECOVERY_API_FALLBACK = env.ONLINE_SOURCE_RECOVERY_API_FALLBACK || "true";
+  }
+  if (!env.DATABASE_URL && env.MAGISTRA_DB_DRIVER !== "pglite") {
     const detected = detectDockerDatabaseUrl();
     if (detected) {
       env.DATABASE_URL = detected;
@@ -391,7 +568,8 @@ async function buildServerEnv(root, port) {
 }
 
 function startDesktopWorker(root, env) {
-  if (env.DESKTOP_WORKER_ENABLED === "false" || !env.DATABASE_URL) {
+  const hasDatabaseRuntime = Boolean(env.DATABASE_URL || env.MAGISTRA_DB_DRIVER === "pglite");
+  if (env.DESKTOP_WORKER_ENABLED === "false" || !hasDatabaseRuntime) {
     return;
   }
   const workerCli = path.join(root, "packages", "worker", "dist", "cli.js");

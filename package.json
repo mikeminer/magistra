@@ -16,6 +16,7 @@
     "snapshot:create": "npm --prefix desktop run snapshot:create"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.3",
     "pdfjs-dist": "^4.8.69"
   }
 }

@@ -1065,7 +1065,7 @@ function pad2(value) {
     return String(value ?? 1).padStart(2, "0");
 }
 function toActType(value) {
-    const normalized = value.trim().toLowerCase();
+    const normalized = value.trim().toLowerCase().replaceAll(".", "-");
     if (normalized === "legge") {
         return "legge";
     }
@@ -1074,6 +1074,12 @@ function toActType(value) {
     }
     if (normalized === "decreto-legislativo") {
         return "decreto-legislativo";
+    }
+    if (normalized === "decreto-presidente-repubblica") {
+        return "decreto-presidente-repubblica";
+    }
+    if (normalized === "regio-decreto") {
+        return "regio-decreto";
     }
     if (normalized === "codice") {
         return "codice";

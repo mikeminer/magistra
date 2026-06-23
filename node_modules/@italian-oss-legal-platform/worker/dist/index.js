@@ -6,8 +6,8 @@ import { PostgresIngestJobRepository, PostgresLegalRepository, comandoUpsertSour
 import { aggregaCorporaNormativi, archiviaFontiCorpus, CODICE_PENALE_ART_5_SOURCE_URL, creaArchiviazioneOggettiDaEnv, LEGGE_392_ART_27_SOURCE_URL, LEGGE_431_ART_2_SOURCE_URL, NORMATTIVA_CODICE_PENALE_ESEMPIO_XML, NORMATTIVA_LEGGE_392_ESEMPIO_XML, NORMATTIVA_LEGGE_431_ESEMPIO_XML, parseCorpusEurLexBase, parseCorpusNormattivaEsempio, parseDocumentiAkomaNtoso } from "../../ingest/dist/index.js";
 import { creaEmbeddingProviderDaEnv } from "../../llm/dist/index.js";
 import { GazzettaUfficialeAdapter, GiurisprudenzaApertaAdapter, NormattivaAdapter, creaUrlNormattivaDaUrn, fontiCatalogabili, scaricaAttoNormattivaOpenData, scaricaDocumentoAkomaNtoso } from "../../sources/dist/index.js";
-import { creaDatabaseDaEnv } from "./status.js";
-export { creaDatabaseDaEnv, leggiStatoIngest, leggiStatoIngestDaEnv } from "./status.js";
+import { creaDatabaseDaEnv, databaseConfigurato } from "./status.js";
+export { creaDatabaseDaEnv, databaseConfigurato, databaseDriverDaEnv, isPgliteDatabase, leggiStatoIngest, leggiStatoIngestDaEnv, normalizzaSqlPerPglite } from "./status.js";
 const GAZZETTA_LEGGE_241_URL = "https://www.gazzettaufficiale.it/eli/id/1990/08/18/090G0294/sq";
 const GAZZETTA_LEGGE_241_FALLBACK_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
@@ -52,7 +52,7 @@ const OPENGA_SENTENZE_SILENZIO_PA_URL = "https://openga.giustizia-amministrativa
 const OPENGA_HOSTNAME = "openga.giustizia-amministrativa.it";
 export async function eseguiIngestNormattivaLocale(options = {}) {
     const env = options.env ?? process.env;
-    const database = options.database ?? (env.DATABASE_URL ? await creaDatabaseDaEnv(env) : undefined);
+    const database = options.database ?? (databaseConfigurato(env) ? await creaDatabaseDaEnv(env) : undefined);
     const jobId = options.jobId ?? `ingest:${new Date().toISOString()}:${randomUUID()}`;
     const jobRepository = database ? new PostgresIngestJobRepository(database) : undefined;
     if (database && options.migraPrima !== false) {
@@ -153,8 +153,8 @@ export async function eseguiSchedulerIngest(options = {}) {
 }
 export async function eseguiRecuperoOnlineNormattiva(urns, options = {}) {
     const env = options.env ?? process.env;
-    if (!env.DATABASE_URL) {
-        throw new Error("DATABASE_URL non configurata: impossibile importare fonti online.");
+    if (!databaseConfigurato(env)) {
+        throw new Error("Database non configurato: impossibile importare fonti online.");
     }
     const database = options.database ?? (await creaDatabaseDaEnv(env));
     const jobId = options.jobId ?? `online-recovery:${new Date().toISOString()}:${randomUUID()}`;
