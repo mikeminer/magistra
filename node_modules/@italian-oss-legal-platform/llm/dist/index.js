@@ -19,6 +19,18 @@ export class GeneratoreRispostaStub {
                 testo: "Non ho fonti normative sufficienti per formulare una risposta citabile."
             };
         }
+        if (isDomandaStrategicaLegale(richiesta)) {
+            return {
+                modello: this.nome,
+                testo: creaRispostaStrategicaStub(richiesta)
+            };
+        }
+        if (isDomandaPerFattispecieLegale(richiesta)) {
+            return {
+                modello: this.nome,
+                testo: creaRispostaFattispecieStub(richiesta)
+            };
+        }
         const punti = richiesta.fonti
             .slice(0, 3)
             .map((fonte, index) => {
@@ -252,6 +264,69 @@ function tronca(input, length) {
     }
     return `${input.slice(0, length - 1).trim()}...`;
 }
+function creaRispostaStrategicaStub(richiesta) {
+    const quadroFonti = richiesta.fonti.slice(0, 5).map((fonte, index) => {
+        return `${fonte.label}: ${tronca(fonte.testo, 240)} [F${index + 1}]`;
+    });
+    const primoMarker = richiesta.fonti.length > 0 ? "[F1]" : "";
+    const secondoMarker = richiesta.fonti.length > 1 ? "[F2]" : primoMarker;
+    const terzoMarker = richiesta.fonti.length > 2 ? "[F3]" : secondoMarker;
+    return [
+        "Quadro fonti: " + quadroFonti.join(" "),
+        `Opzioni: la scelta va impostata confrontando le alternative processuali o sostanziali emerse dalla domanda con i presupposti indicati dalle fonti recuperate ${primoMarker}.`,
+        `Effetti: per ogni opzione occorre distinguere effetto immediato, effetto sulla fase successiva ed eventuali riflessi esecutivi, restando nei limiti delle norme effettivamente disponibili ${secondoMarker}.`,
+        `Rischi e dati mancanti: se mancano pena concreta, precedenti, termini, stato del procedimento o testo degli atti, la risposta non puo scegliere l'opzione migliore e deve indicare quali dati servono ${terzoMarker}.`,
+        "La valutazione resta informativa e va verificata da un professionista sul fascicolo completo."
+    ].join("\n");
+}
+function creaRispostaFattispecieStub(richiesta) {
+    const quadroFonti = richiesta.fonti.slice(0, 4).map((fonte, index) => {
+        return `${fonte.label}: ${tronca(fonte.testo, 260)} [F${index + 1}]`;
+    });
+    const primoMarker = richiesta.fonti.length > 0 ? "[F1]" : "";
+    const secondoMarker = richiesta.fonti.length > 1 ? "[F2]" : primoMarker;
+    return [
+        "Fattispecie candidate: la qualificazione deve partire dai fatti descritti e dagli elementi costitutivi ricavabili dalle fonti recuperate.",
+        quadroFonti.join(" "),
+        `Elementi da verificare: condotta, evento o danno, nesso, elemento soggettivo e circostanze rilevanti vanno collegati a fonti citate, senza usare risultati non importati ${primoMarker}.`,
+        `Dati mancanti: se il fascicolo non contiene tutti gli elementi fattuali, la risposta deve segnalarlo prima di concludere ${secondoMarker}.`
+    ].join("\n");
+}
+function isDomandaStrategicaLegale(richiesta) {
+    const domanda = normalizzaPerConfronto(richiesta.domanda);
+    return (domanda.includes("strateg") ||
+        domanda.includes("conviene") ||
+        domanda.includes("convenienza") ||
+        domanda.includes("matrice strategica") ||
+        domanda.includes("scenari") ||
+        domanda.includes("opzioni") ||
+        domanda.includes("scelta difensiva") ||
+        domanda.includes("effetti processuali") ||
+        domanda.includes("effetti successivi") ||
+        domanda.includes("effetti esecutivi") ||
+        domanda.includes("conseguenze della scelta") ||
+        domanda.includes("conseguenze processuali") ||
+        domanda.includes("conseguenze esecutive") ||
+        domanda.includes("pattegg") ||
+        domanda.includes("abbreviat") ||
+        domanda.includes("decreto penale") ||
+        domanda.includes("continuazione") ||
+        domanda.includes("prescrizion") ||
+        domanda.includes("misure alternative"));
+}
+function isDomandaPerFattispecieLegale(richiesta) {
+    const domanda = normalizzaPerConfronto(richiesta.domanda);
+    return (domanda.includes("fattispecie") ||
+        domanda.includes("partendo dai fatti") ||
+        (domanda.includes("caso concreto") &&
+            (domanda.includes("reato") ||
+                domanda.includes("condotta") ||
+                domanda.includes("qualificazione"))) ||
+        domanda.includes("integra reato") ||
+        domanda.includes("qualificazione giuridica") ||
+        domanda.includes("elementi costitutivi") ||
+        domanda.includes("truff"));
+}
 function creaPromptCitazionale(richiesta) {
     return [
         CREA_SYSTEM_PROMPT_CITAZIONALE,
@@ -267,8 +342,9 @@ const CREA_SYSTEM_PROMPT_CITAZIONALE = [
     "Non copiare lunghi passaggi testuali: sintetizza in italiano comprensibile.",
     "Ogni affermazione giuridica rilevante deve citare una fonte con il formato [F1], [F2], ecc.",
     "Se le fonti non bastano, dillo esplicitamente e spiega quale informazione manca.",
-    "Non fornire consulenza legale personalizzata e non suggerire azioni processuali specifiche.",
-    "Rispondi in 4-8 frasi, con eventuale elenco puntato solo se rende la risposta piu leggibile."
+    "Quando la domanda chiede strategia, convenienza o scenari, confronta le opzioni in modo informativo indicando presupposti, effetti, rischi e dati mancanti; non presentare la risposta come istruzione operativa o decisione professionale.",
+    "Quando la domanda descrive una fattispecie, parti dai fatti indicati e collega solo gli elementi ricavabili dalle fonti recuperate.",
+    "Rispondi in 4-10 frasi, con eventuale elenco puntato solo se rende la risposta piu leggibile."
 ].join(" ");
 function creaMessaggiCitazionali(richiesta) {
     return [

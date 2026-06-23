@@ -25,18 +25,20 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
         if (rispostaFunzione) {
             return rispostaFunzione;
         }
-        let risultati = await cercaChunkDatabase(domanda, database, env);
+        const profiloDomanda = creaProfiloDomandaLegale(domanda);
+        const domandaRetrieval = espandiDomandaPerRetrieval(domanda, profiloDomanda);
+        let risultati = await cercaChunkDatabase(domandaRetrieval, database, env);
         let recuperoFontiOnline = {
             stato: "non-necessario"
         };
         const embeddingProvider = creaEmbeddingProviderDaEnv(env);
         const generatore = creaGeneratoreRispostaDaEnv(env);
-        if (risultati.length === 0 || deveTentareRecuperoFontiOnline(domanda, risultati)) {
-            recuperoFontiOnline = await tentaRecuperoFontiOnlineSuMiss(domanda, database, env);
+        if (risultati.length === 0 || deveTentareRecuperoFontiOnline(domandaRetrieval, risultati)) {
+            recuperoFontiOnline = await tentaRecuperoFontiOnlineSuMiss(domandaRetrieval, database, env);
             if (recuperoFontiOnline.stato === "riuscito") {
-                risultati = await cercaChunkDatabase(domanda, database, env);
+                risultati = await cercaChunkDatabase(domandaRetrieval, database, env);
             }
-            else if (risultati.length > 0 && deveScartareRisultatiNonMirati(domanda, risultati)) {
+            else if (risultati.length > 0 && deveScartareRisultatiNonMirati(domandaRetrieval, risultati)) {
                 risultati = [];
             }
         }
@@ -49,6 +51,7 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
                 metriche: {
                     coperturaCitazioni: 0,
                     modelloRisposta: generatore.nome,
+                    profiloDomanda,
                     providerEmbedding: embeddingProvider.nome,
                     recuperoFontiOnline,
                     retrieval: "ibrido",
@@ -78,7 +81,7 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
         }));
         const riferimentiNormativi = deduplicaRiferimentiNormativi(fontiRecuperate.flatMap((fonte) => fonte.riferimentiNormativi ?? []));
         const generata = await generatore.genera({
-            domanda,
+            domanda: creaDomandaPerGenerazione(domanda, profiloDomanda),
             fonti: fontiRecuperate.map((fonte) => ({
                 eli: fonte.eli,
                 label: fonte.label,
@@ -100,6 +103,7 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
             metriche: {
                 coperturaCitazioni: calcolaCoperturaCitazioni(fontiRecuperate),
                 modelloRisposta: generata.modello,
+                profiloDomanda,
                 providerEmbedding: embeddingProvider.nome,
                 recuperoFontiOnline,
                 retrieval: "ibrido",
@@ -703,9 +707,113 @@ function pulisciTitoloFonte(value) {
     const cleaned = value?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     return cleaned && cleaned.length > 0 ? cleaned : undefined;
 }
+function creaProfiloDomandaLegale(domanda) {
+    const normalized = normalizza(domanda).replace(/\s+/g, " ").trim();
+    const temi = [];
+    if (isDomandaSuTruffaPenale(normalized)) {
+        temi.push("truffa");
+    }
+    if (isDomandaSuMisureCautelariPenali(normalized)) {
+        temi.push("misure-cautelari");
+    }
+    if (isDomandaSuPatteggiamento(normalized)) {
+        temi.push("patteggiamento");
+    }
+    if (isDomandaSuGiudizioAbbreviato(normalized)) {
+        temi.push("giudizio-abbreviato");
+    }
+    if (isDomandaSuDecretoPenale(normalized)) {
+        temi.push("decreto-penale");
+    }
+    if (isDomandaSuContinuazionePenale(normalized)) {
+        temi.push("continuazione");
+    }
+    if (isDomandaSuSospensioneBeneficiPenali(normalized)) {
+        temi.push("benefici-pena");
+    }
+    if (isDomandaSuPrescrizionePenale(normalized)) {
+        temi.push("prescrizione");
+    }
+    if (isDomandaSuMisureAlternativePenali(normalized)) {
+        temi.push("misure-alternative");
+    }
+    const fattispecie = isDomandaPerFattispecie(normalized) || temi.includes("truffa");
+    const strategica = isDomandaStrategicaPenale(normalized) || temi.some((tema) => [
+        "patteggiamento",
+        "giudizio-abbreviato",
+        "decreto-penale",
+        "continuazione",
+        "benefici-pena",
+        "prescrizione",
+        "misure-alternative"
+    ].includes(tema));
+    return {
+        fattispecie,
+        strategica,
+        temi: uniqueStrings(temi)
+    };
+}
+function espandiDomandaPerRetrieval(domanda, profilo) {
+    const espansioni = [];
+    if (profilo.fattispecie) {
+        espansioni.push("ricerca per fattispecie condotta elementi costitutivi presupposti conseguenze dati mancanti");
+    }
+    if (profilo.strategica) {
+        espansioni.push("ragionamento strategico opzioni difensive effetti processuali effetti esecutivi rischi presupposti alternative");
+    }
+    if (profilo.temi.includes("truffa")) {
+        espansioni.push("truffa norma 640 artifici raggiri profitto danno bonifico online restituzione risarcimento attenuanti pena");
+    }
+    if (profilo.temi.includes("misure-cautelari")) {
+        espansioni.push("misure cautelari personali norme 272 273 274 275 gravi indizi esigenze cautelari proporzionalita adeguatezza limiti liberta personale");
+    }
+    if (profilo.temi.includes("patteggiamento")) {
+        espansioni.push("patteggiamento applicazione pena su richiesta norma 444 effetti benefici premiali scelta rito");
+    }
+    if (profilo.temi.includes("giudizio-abbreviato")) {
+        espansioni.push("giudizio abbreviato norma 438 rito alternativo riduzione pena effetti scelta difensiva");
+    }
+    if (profilo.temi.includes("decreto-penale")) {
+        espansioni.push("decreto penale di condanna opposizione decreto penale norme 459 461 effetti termini riti alternativi");
+    }
+    if (profilo.temi.includes("continuazione")) {
+        espansioni.push("reato continuato continuazione norma 81 continuazione in esecuzione norma 671 incidente esecuzione");
+    }
+    if (profilo.temi.includes("benefici-pena")) {
+        espansioni.push("sospensione condizionale pena benefici revoca limiti precedenti norme 163 164 168");
+    }
+    if (profilo.temi.includes("prescrizione")) {
+        espansioni.push("prescrizione reato termini sospensione interruzione norme 157 160 161");
+    }
+    if (profilo.temi.includes("misure-alternative")) {
+        espansioni.push("misure alternative detenzione affidamento in prova detenzione domiciliare semiliberta ordinamento penitenziario legge 354 1975");
+    }
+    return espansioni.length > 0
+        ? `${domanda}\n\nEspansione retrieval: ${uniqueStrings(espansioni).join("; ")}`
+        : domanda;
+}
+function creaDomandaPerGenerazione(domanda, profilo) {
+    const istruzioni = [];
+    if (profilo.fattispecie) {
+        istruzioni.push("Rispondi partendo dai fatti: individua fattispecie candidate, norme rilevanti, elementi che servono a confermare o escludere la qualificazione e dati mancanti.");
+    }
+    if (profilo.strategica) {
+        istruzioni.push("Imposta una matrice strategica informativa con opzioni, presupposti, effetti immediati, effetti successivi, rischi e dati mancanti. Non trasformarla in istruzioni operative: resta sulle conseguenze ricavabili dalle fonti.");
+    }
+    return istruzioni.length > 0
+        ? `${domanda}\n\nIstruzioni di formato: ${istruzioni.join(" ")}`
+        : domanda;
+}
 async function cercaChunkDatabase(domanda, database, env) {
-    const riferimentiEspliciti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
-    if (riferimentiEspliciti.length === 0) {
+    const riferimentiDomanda = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
+    const riferimentiPianificati = pianificaUrnNormattivaPerRecupero(domanda)
+        .map(riferimentoNormattivaDaUrn)
+        .filter((riferimento) => riferimento && haRiferimentoNormativoAzionabile(riferimento));
+    const riferimentiMirati = deduplicaRiferimentiPerRetrieval([
+        ...riferimentiDomanda,
+        ...riferimentiPianificati
+    ]);
+    if (riferimentiDomanda.length === 0) {
         const locazione = await cercaDurataLocazioneDatabase(domanda, database);
         if (locazione.length > 0) {
             return locazione;
@@ -713,13 +821,13 @@ async function cercaChunkDatabase(domanda, database, env) {
     }
     const provider = creaEmbeddingProviderDaEnv(env);
     const embedding = await provider.generaEmbedding(domanda);
-    if (riferimentiEspliciti.length > 0) {
-        const risultatiMirati = await cercaChunkDatabasePerRiferimenti(domanda, database, embedding, riferimentiEspliciti);
+    if (riferimentiMirati.length > 0) {
+        const risultatiMirati = await cercaChunkDatabasePerRiferimenti(domanda, database, embedding, riferimentiMirati);
         if (risultatiMirati.length > 0) {
             return risultatiMirati;
         }
     }
-    const riferimento = riferimentiEspliciti[0] ?? estraiRiferimentoDomanda(domanda);
+    const riferimento = riferimentiDomanda[0] ?? estraiRiferimentoDomanda(domanda);
     let query = isPgliteDatabase(database)
         ? creaQueryChunkDatabaseCompatibile(riferimento)
         : creaQueryChunkDatabase(embedding, riferimento);
@@ -744,10 +852,28 @@ async function cercaChunkDatabase(domanda, database, env) {
             : Math.max(1, migliore * 0.25);
     return ranked.filter((resultItem) => resultItem.punteggio >= soglia).slice(0, 8);
 }
+function deduplicaRiferimentiPerRetrieval(riferimenti) {
+    const perChiave = new Map();
+    for (const riferimento of riferimenti) {
+        const chiave = [
+            riferimento.fonte ?? "",
+            riferimento.tipoAtto ?? "",
+            riferimento.numeroAtto ?? "",
+            riferimento.annoAtto ?? "",
+            riferimento.articolo ?? "",
+            riferimento.comma ?? ""
+        ].join("|");
+        if (!perChiave.has(chiave)) {
+            perChiave.set(chiave, riferimento);
+        }
+    }
+    return [...perChiave.values()];
+}
 async function cercaChunkDatabasePerRiferimenti(domanda, database, embedding, riferimenti) {
     const tokensDomanda = tokenizza(domanda);
     const risultatiPerId = new Map();
-    for (const riferimento of riferimenti.slice(0, 12)) {
+    const quotaPerRiferimento = riferimenti.length > 6 ? 1 : undefined;
+    for (const riferimento of riferimenti.slice(0, 18)) {
         const query = isPgliteDatabase(database)
             ? creaQueryChunkDatabaseCompatibile(riferimento)
             : creaQueryChunkDatabase(embedding, riferimento);
@@ -755,7 +881,7 @@ async function cercaChunkDatabasePerRiferimenti(domanda, database, embedding, ri
         const rows = isPgliteDatabase(database)
             ? ordinaChunkCompatibiliPerEmbedding(result.rows ?? [], embedding).slice(0, 80)
             : (result.rows ?? []);
-        const quota = riferimento.comma ? 2 : 3;
+        const quota = quotaPerRiferimento ?? (riferimento.comma ? 2 : 3);
         const ranked = rows
             .map((row) => formattaRisultatoDatabase(row, domanda, tokensDomanda, riferimento))
             .filter((resultItem) => metadatiSoddisfanoRiferimento(resultItem.metadati, riferimento))
@@ -832,21 +958,48 @@ function deveTentareRecuperoFontiOnline(domanda, risultati) {
     if (urns.length === 0 || risultati.length === 0) {
         return urns.length > 0;
     }
+    const riferimentiPianificati = urns
+        .map(riferimentoNormattivaDaUrn)
+        .filter((item) => item && haRiferimentoNormativoAzionabile(item));
+    const mancaFontePianificata = riferimentiPianificati.some((riferimentoPianificato) => !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimentoPianificato)));
     const riferimenti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
     if (riferimenti.length > 0) {
-        return riferimenti.some((riferimento) => !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+        return (mancaFontePianificata ||
+            riferimenti.some((riferimento) => !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento))));
     }
     const riferimento = estraiRiferimentoDomanda(domanda);
     if (!haRiferimentoNormativoAzionabile(riferimento)) {
-        return false;
+        return mancaFontePianificata;
     }
-    return !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento));
+    return (mancaFontePianificata ||
+        !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+}
+function riferimentoNormattivaDaUrn(urn) {
+    const match = urn.match(/^urn:nir:stato:[^:]+:([0-9]{4})(?:-[0-9]{2}-[0-9]{2})?;([0-9]+)(?:~art([0-9a-z-]+))?/i);
+    if (!match?.[1] || !match[2]) {
+        return undefined;
+    }
+    return {
+        annoAtto: match[1],
+        articolo: normalizzaIdentificatoreNormativo(match[3]),
+        fonte: "Normattiva",
+        numeroAtto: match[2]
+    };
 }
 function deveScartareRisultatiNonMirati(domanda, risultati) {
     const riferimenti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
+    const riferimentiPianificati = pianificaUrnNormattivaPerRecupero(domanda)
+        .map(riferimentoNormattivaDaUrn)
+        .filter((riferimento) => riferimento && haRiferimentoNormativoAzionabile(riferimento));
     if (riferimenti.length > 0) {
+        const mancaRiferimentoEsplicito = !risultati.some((risultato) => riferimenti.some((riferimento) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+        const mancaRiferimentoPianificato = riferimentiPianificati.length > riferimenti.length &&
+            riferimentiPianificati.some((riferimento) => !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+        return risultati.length > 0 && (mancaRiferimentoEsplicito || mancaRiferimentoPianificato);
+    }
+    if (riferimentiPianificati.length > 0) {
         return (risultati.length > 0 &&
-            !risultati.some((risultato) => riferimenti.some((riferimento) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento))));
+            !risultati.some((risultato) => riferimentiPianificati.some((riferimento) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento))));
     }
     const riferimento = estraiRiferimentoDomanda(domanda);
     return (haRiferimentoNormativoAzionabile(riferimento) &&
@@ -1042,6 +1195,80 @@ function pianificaUrnNormattivaDaTema(normalized) {
     if (isDomandaSuImpugnazioneLicenziamento(normalized)) {
         urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.legge6041966, "6"));
     }
+    urns.push(...pianificaUrnNormattivaDaTemaPenale(normalized));
+    return urns;
+}
+function pianificaUrnNormattivaDaTemaPenale(normalized) {
+    const urns = [];
+    const aggiungiArticoli = (atto, articoli) => {
+        for (const articolo of articoli) {
+            urns.push(creaUrnNormattiva(atto, articolo));
+        }
+    };
+    if (isDomandaSuTruffaPenale(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, ["640", "62", "133"]);
+    }
+    if (isDomandaSuMisureCautelariPenali(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, [
+            "272",
+            "273",
+            "274",
+            "275"
+        ]);
+    }
+    if (normalized.includes("arresti domiciliari")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["284"]);
+    }
+    if (normalized.includes("braccialetto elettronico") || normalized.includes("controllo elettronico")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["275-bis"]);
+    }
+    if (normalized.includes("divieto di avvicinamento") || normalized.includes("allontanamento")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, [
+            "282-bis",
+            "282-ter"
+        ]);
+    }
+    if (normalized.includes("obbligo di presentazione") || normalized.includes("firma")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["282"]);
+    }
+    if (normalized.includes("aggravamento") && normalized.includes("misura")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["276", "299"]);
+    }
+    if (normalized.includes("revoca") && normalized.includes("misura")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["299"]);
+    }
+    if (normalized.includes("interrogatorio di garanzia")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["294"]);
+    }
+    if (normalized.includes("riesame")) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["309"]);
+    }
+    if (isDomandaSuPatteggiamento(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["444", "445"]);
+    }
+    if (isDomandaSuGiudizioAbbreviato(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["438", "442"]);
+    }
+    if (isDomandaSuDecretoPenale(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["459", "461"]);
+    }
+    if (isDomandaSuContinuazionePenale(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, ["81"]);
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale, ["671"]);
+    }
+    if (isDomandaSuSospensioneBeneficiPenali(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, ["163", "164", "168"]);
+    }
+    if (isDomandaSuPrescrizionePenale(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, ["157", "160", "161"]);
+    }
+    if (isDomandaSuMisureAlternativePenali(normalized)) {
+        aggiungiArticoli(ATTI_NORMATTIVA_CONOSCIUTI.legge3541975, [
+            "47",
+            "47-ter",
+            "50"
+        ]);
+    }
     return urns;
 }
 const ATTI_NORMATTIVA_CONOSCIUTI = {
@@ -1121,6 +1348,12 @@ const ATTI_NORMATTIVA_CONOSCIUTI = {
         annoAtto: "1966",
         dataAtto: "1966-07-15",
         numeroAtto: "604",
+        tipoAttoUrn: "legge"
+    },
+    legge3541975: {
+        annoAtto: "1975",
+        dataAtto: "1975-07-26",
+        numeroAtto: "354",
         tipoAttoUrn: "legge"
     }
 };
@@ -1531,6 +1764,85 @@ function calcolaPunteggioLessicale(domanda, tokensDomanda, testo, metadati, rife
         metadati.articolo === "5") {
         score += 24;
     }
+    if (isDomandaSuTruffaPenale(normalizzata) &&
+        metadati.numeroAtto === "1398" &&
+        ["640", "62", "133"].includes(metadati.articolo)) {
+        score += metadati.articolo === "640" ? 28 : 12;
+    }
+    if (isDomandaSuMisureCautelariPenali(normalizzata) &&
+        metadati.numeroAtto === "447" &&
+        ["272", "273", "274", "275", "275-bis", "276", "282", "282-bis", "282-ter", "284", "294", "299", "309"].includes(metadati.articolo)) {
+        score += ["272", "273", "274", "275"].includes(metadati.articolo) ? 28 : 14;
+        if ((metadati.articolo === "272" && metadati.comma === "1") ||
+            (metadati.articolo === "273" && ["1", "2"].includes(metadati.comma)) ||
+            (metadati.articolo === "274" && metadati.comma === "1") ||
+            (metadati.articolo === "275" && metadati.comma === "1")) {
+            score += 12;
+        }
+    }
+    if (isDomandaSuPatteggiamento(normalizzata) &&
+        metadati.numeroAtto === "447" &&
+        ["444", "445"].includes(metadati.articolo)) {
+        score += metadati.articolo === "444" ? 28 : 16;
+        if ((metadati.articolo === "444" && metadati.comma === "1") ||
+            (metadati.articolo === "445" && metadati.comma === "1")) {
+            score += 12;
+        }
+    }
+    if (isDomandaSuGiudizioAbbreviato(normalizzata) &&
+        metadati.numeroAtto === "447" &&
+        ["438", "442"].includes(metadati.articolo)) {
+        score += metadati.articolo === "438" ? 28 : 16;
+        if ((metadati.articolo === "438" && metadati.comma === "1") ||
+            (metadati.articolo === "442" && metadati.comma === "2")) {
+            score += 10;
+        }
+    }
+    if (isDomandaSuDecretoPenale(normalizzata) &&
+        metadati.numeroAtto === "447" &&
+        ["459", "461"].includes(metadati.articolo)) {
+        score += 24;
+        if (metadati.comma === "1") {
+            score += 10;
+        }
+    }
+    if (isDomandaSuContinuazionePenale(normalizzata)) {
+        if (metadati.numeroAtto === "1398" && metadati.articolo === "81") {
+            score += 28;
+            if (metadati.comma === "2") {
+                score += 12;
+            }
+        }
+        if (metadati.numeroAtto === "447" && metadati.articolo === "671") {
+            score += 24;
+            if (metadati.comma === "1") {
+                score += 12;
+            }
+        }
+    }
+    if (isDomandaSuSospensioneBeneficiPenali(normalizzata) &&
+        metadati.numeroAtto === "1398" &&
+        ["163", "164", "168"].includes(metadati.articolo)) {
+        score += 18;
+        if ((metadati.articolo === "163" && metadati.comma === "1") ||
+            (metadati.articolo === "164" && metadati.comma === "1") ||
+            (metadati.articolo === "168" && metadati.comma === "1")) {
+            score += 8;
+        }
+    }
+    if (isDomandaSuPrescrizionePenale(normalizzata) &&
+        metadati.numeroAtto === "1398" &&
+        ["157", "160", "161"].includes(metadati.articolo)) {
+        score += 18;
+        if (metadati.comma === "1") {
+            score += 8;
+        }
+    }
+    if (isDomandaSuMisureAlternativePenali(normalizzata) &&
+        metadati.numeroAtto === "354" &&
+        ["47", "47-ter", "50"].includes(metadati.articolo)) {
+        score += 20;
+    }
     if (isDomandaSuDurataLocazione(normalizzata)) {
         if (metadati.numeroAtto === "431" && metadati.articolo === "2") {
             score += metadati.comma === "1" ? 24 : 20;
@@ -1916,6 +2228,92 @@ function isDomandaSuIgnoranzaLeggePenale(normalized) {
             (normalized.includes("legge") ||
                 normalized.includes("penale") ||
                 normalized.includes("scusa"))));
+}
+function isDomandaPerFattispecie(normalized) {
+    return (normalized.includes("fattispecie") ||
+        normalized.includes("condotta descritta") ||
+        (normalized.includes("caso concreto") &&
+            (normalized.includes("reato") ||
+                normalized.includes("condotta") ||
+                normalized.includes("qualificazione"))) ||
+        normalized.includes("integra reato") ||
+        normalized.includes("integrare reato") ||
+        normalized.includes("qualificazione giuridica") ||
+        normalized.includes("elementi costitutivi") ||
+        isDomandaSuTruffaPenale(normalized));
+}
+function isDomandaStrategicaPenale(normalized) {
+    return (normalized.includes("strateg") ||
+        normalized.includes("conviene") ||
+        normalized.includes("convenienza") ||
+        normalized.includes("opzioni") ||
+        normalized.includes("scenario") ||
+        normalized.includes("scenari") ||
+        normalized.includes("scelta difensiva") ||
+        normalized.includes("effetti processuali") ||
+        normalized.includes("effetti esecutivi") ||
+        normalized.includes("rischi") ||
+        normalized.includes("conseguenze della scelta") ||
+        normalized.includes("conseguenze processuali") ||
+        normalized.includes("conseguenze esecutive") ||
+        isDomandaSuPatteggiamento(normalized) ||
+        isDomandaSuGiudizioAbbreviato(normalized) ||
+        isDomandaSuDecretoPenale(normalized) ||
+        isDomandaSuContinuazionePenale(normalized) ||
+        isDomandaSuSospensioneBeneficiPenali(normalized) ||
+        isDomandaSuPrescrizionePenale(normalized) ||
+        isDomandaSuMisureAlternativePenali(normalized));
+}
+function isDomandaSuTruffaPenale(normalized) {
+    return (normalized.includes("truff") ||
+        (normalized.includes("bonifico") &&
+            (normalized.includes("online") || normalized.includes("falso") || normalized.includes("raggir"))));
+}
+function isDomandaSuMisureCautelariPenali(normalized) {
+    return (normalized.includes("misura cautelare") ||
+        normalized.includes("misure cautelari") ||
+        normalized.includes("esigenze cautelari") ||
+        normalized.includes("gravi indizi") ||
+        normalized.includes("liberta personale") ||
+        normalized.includes("arresti domiciliari") ||
+        normalized.includes("braccialetto elettronico") ||
+        normalized.includes("divieto di avvicinamento") ||
+        normalized.includes("obbligo di presentazione") ||
+        normalized.includes("interrogatorio di garanzia") ||
+        normalized.includes("riesame"));
+}
+function isDomandaSuPatteggiamento(normalized) {
+    return normalized.includes("pattegg");
+}
+function isDomandaSuGiudizioAbbreviato(normalized) {
+    return normalized.includes("abbreviat");
+}
+function isDomandaSuDecretoPenale(normalized) {
+    return (normalized.includes("decreto penale") ||
+        normalized.includes("opposizione al decreto") ||
+        normalized.includes("decreto di condanna"));
+}
+function isDomandaSuContinuazionePenale(normalized) {
+    return (normalized.includes("continuaz") ||
+        /\b81\s*c\s*\.?\s*p\b/.test(normalized) ||
+        /\b81\s*cp\b/.test(normalized));
+}
+function isDomandaSuSospensioneBeneficiPenali(normalized) {
+    return ((normalized.includes("sospensione condizionale") ||
+        normalized.includes("revoca del beneficio") ||
+        normalized.includes("beneficio della sospensione") ||
+        normalized.includes("precedenti specifici")) &&
+        (normalized.includes("pena") || normalized.includes("reato") || normalized.includes("condanna")));
+}
+function isDomandaSuPrescrizionePenale(normalized) {
+    return normalized.includes("prescrizion");
+}
+function isDomandaSuMisureAlternativePenali(normalized) {
+    return (normalized.includes("misure alternative") ||
+        normalized.includes("affidamento in prova") ||
+        normalized.includes("detenzione domiciliare") ||
+        normalized.includes("semiliberta") ||
+        normalized.includes("semilibertà"));
 }
 function isDomandaSuDurataLocazione(normalized) {
     const parlaDiLocazione = normalized.includes("locazione") ||
