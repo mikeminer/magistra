@@ -14,5 +14,8 @@
     "kb:validate": "node scripts/validate-knowledge-base.mjs",
     "desktop:dist": "npm --prefix desktop run dist:win",
     "snapshot:create": "npm --prefix desktop run snapshot:create"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.8.69"
   }
 }
