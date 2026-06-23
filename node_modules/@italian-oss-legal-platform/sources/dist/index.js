@@ -291,7 +291,7 @@ function trovaUrlArticoloNormattiva(html, articolo) {
     return undefined;
 }
 function normalizzaIdentificatoreArticolo(value) {
-    return value?.replace(/_/g, "-").replace(/\s*-\s*/g, "-").replace(/\s+/g, "").toLowerCase();
+    return value?.replace(/_/g, "-").replace(/\s*-\s*/g, "-").trim().replace(/\s+/g, "-").toLowerCase();
 }
 function creaCookieHeader(headers) {
     const headerRecord = headers;

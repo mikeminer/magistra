@@ -399,6 +399,9 @@ function creaRispostaControllataImpugnazioneLicenziamento(richiesta) {
 }
 function isDomandaSuDurataLocazione(richiesta) {
     const domanda = normalizzaPerConfronto(richiesta.domanda);
+    const fontiLocazione = richiesta.fonti.some((fonte) => fonte.metadati.fonte === "Normattiva" &&
+        ((fonte.metadati.numeroAtto === "431" && fonte.metadati.articolo === "2") ||
+            (fonte.metadati.numeroAtto === "392" && fonte.metadati.articolo === "27")));
     const parlaDiLocazione = domanda.includes("locazione") ||
         domanda.includes("affitto") ||
         domanda.includes("contratto di casa") ||
@@ -408,7 +411,7 @@ function isDomandaSuDurataLocazione(richiesta) {
         domanda.includes("anni") ||
         domanda.includes("scadenza") ||
         domanda.includes("rinnovo");
-    return parlaDiLocazione && chiedeDurata;
+    return fontiLocazione && parlaDiLocazione && chiedeDurata;
 }
 function creaRispostaControllataDurataLocazione(richiesta) {
     const markerAbitativa = markerFonte(richiesta, (fonte) => fonte.metadati.numeroAtto === "431" &&

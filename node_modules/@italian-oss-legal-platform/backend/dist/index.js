@@ -1,13 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { PostgresDocumentRepository, PostgresLegalRepository, PostgresReviewRepository, contaSnapshotDatabase, creaSnapshotDatabase } from "@italian-oss-legal-platform/database";
-import { createCitationLabel } from "@italian-oss-legal-platform/domain";
-import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "@italian-oss-legal-platform/ingest";
-import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv } from "@italian-oss-legal-platform/llm";
-import { getCorpusDimostrativo, rispondiConFontiRag } from "@italian-oss-legal-platform/retrieval";
-import { NormattivaAdapter, scaricaAttoNormattivaOpenData } from "@italian-oss-legal-platform/sources";
-import { creaDatabaseDaEnv } from "@italian-oss-legal-platform/worker/status";
+import { PostgresDocumentRepository, PostgresLegalRepository, PostgresReviewRepository, contaSnapshotDatabase, creaSnapshotDatabase } from "../../database/dist/index.js";
+import { createCitationLabel } from "../../domain/dist/index.js";
+import { archiviaFontiCorpus, creaArchiviazioneOggettiDaEnv, parseDocumentiAkomaNtoso } from "../../ingest/dist/index.js";
+import { creaEmbeddingProviderDaEnv, creaGeneratoreRispostaDaEnv } from "../../llm/dist/index.js";
+import { getCorpusDimostrativo, rispondiConFontiRag } from "../../retrieval/dist/index.js";
+import { NormattivaAdapter, scaricaAttoNormattivaOpenData } from "../../sources/dist/index.js";
+import { creaDatabaseDaEnv } from "../../worker/dist/status.js";
 export async function rispondiConFonti(domanda, env = process.env) {
     const rispostaDatabase = await rispondiConFontiDatabase(domanda, env);
     return rispostaDatabase ?? (await rispondiConFontiRag(domanda, {
@@ -704,13 +704,22 @@ function pulisciTitoloFonte(value) {
     return cleaned && cleaned.length > 0 ? cleaned : undefined;
 }
 async function cercaChunkDatabase(domanda, database, env) {
-    const locazione = await cercaDurataLocazioneDatabase(domanda, database);
-    if (locazione.length > 0) {
-        return locazione;
+    const riferimentiEspliciti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
+    if (riferimentiEspliciti.length === 0) {
+        const locazione = await cercaDurataLocazioneDatabase(domanda, database);
+        if (locazione.length > 0) {
+            return locazione;
+        }
     }
     const provider = creaEmbeddingProviderDaEnv(env);
     const embedding = await provider.generaEmbedding(domanda);
-    const riferimento = estraiRiferimentoDomanda(domanda);
+    if (riferimentiEspliciti.length > 0) {
+        const risultatiMirati = await cercaChunkDatabasePerRiferimenti(domanda, database, embedding, riferimentiEspliciti);
+        if (risultatiMirati.length > 0) {
+            return risultatiMirati;
+        }
+    }
+    const riferimento = riferimentiEspliciti[0] ?? estraiRiferimentoDomanda(domanda);
     let query = creaQueryChunkDatabase(embedding, riferimento);
     let result = (await database.query(query.text, query.values));
     if (query.filtroStrutturato && (result.rows?.length ?? 0) === 0) {
@@ -728,7 +737,27 @@ async function cercaChunkDatabase(domanda, database, env) {
         : migliore <= 2
             ? 0.45
             : Math.max(1, migliore * 0.25);
-    return ranked.filter((resultItem) => resultItem.punteggio >= soglia).slice(0, 5);
+    return ranked.filter((resultItem) => resultItem.punteggio >= soglia).slice(0, 8);
+}
+async function cercaChunkDatabasePerRiferimenti(domanda, database, embedding, riferimenti) {
+    const tokensDomanda = tokenizza(domanda);
+    const risultatiPerId = new Map();
+    for (const riferimento of riferimenti.slice(0, 12)) {
+        const query = creaQueryChunkDatabase(embedding, riferimento);
+        const result = (await database.query(query.text, query.values));
+        const quota = riferimento.comma ? 2 : 3;
+        const ranked = (result.rows ?? [])
+            .map((row) => formattaRisultatoDatabase(row, domanda, tokensDomanda, riferimento))
+            .filter((resultItem) => metadatiSoddisfanoRiferimento(resultItem.metadati, riferimento))
+            .sort((left, right) => right.punteggio - left.punteggio)
+            .slice(0, quota);
+        for (const resultItem of ranked) {
+            if (!risultatiPerId.has(resultItem.id)) {
+                risultatiPerId.set(resultItem.id, resultItem);
+            }
+        }
+    }
+    return [...risultatiPerId.values()].slice(0, 12);
 }
 async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
     if (env.ONLINE_SOURCE_RECOVERY_ENABLED === "false") {
@@ -784,6 +813,10 @@ function deveTentareRecuperoFontiOnline(domanda, risultati) {
     if (urns.length === 0 || risultati.length === 0) {
         return urns.length > 0;
     }
+    const riferimenti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
+    if (riferimenti.length > 0) {
+        return riferimenti.some((riferimento) => !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+    }
     const riferimento = estraiRiferimentoDomanda(domanda);
     if (!haRiferimentoNormativoAzionabile(riferimento)) {
         return false;
@@ -791,6 +824,11 @@ function deveTentareRecuperoFontiOnline(domanda, risultati) {
     return !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento));
 }
 function deveScartareRisultatiNonMirati(domanda, risultati) {
+    const riferimenti = estraiRiferimentiNormativiDomanda(domanda).filter((riferimento) => haRiferimentoNormativoAzionabile(riferimento));
+    if (riferimenti.length > 0) {
+        return (risultati.length > 0 &&
+            !risultati.some((risultato) => riferimenti.some((riferimento) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento))));
+    }
     const riferimento = estraiRiferimentoDomanda(domanda);
     return (haRiferimentoNormativoAzionabile(riferimento) &&
         risultati.length > 0 &&
@@ -907,11 +945,12 @@ async function importaUrnNormattivaNelDatabase(urns, database, env) {
     };
 }
 export function pianificaUrnNormattivaPerRecupero(domanda) {
-    const normalized = normalizza(domanda).replace(/\s+/g, " ").trim();
-    const riferimento = estraiRiferimentoDomanda(domanda);
+    const testoRiferimenti = testoPerRiferimentiNormativi(domanda);
+    const normalized = normalizza(testoRiferimenti).replace(/\s+/g, " ").trim();
+    const riferimenti = estraiRiferimentiNormativiDomanda(domanda);
     return deduplicaUrnNormattiva([
         ...estraiUrnNormattivaDaTesto(domanda),
-        ...pianificaUrnNormattivaDaRiferimento(riferimento, normalized),
+        ...riferimenti.flatMap((riferimento) => pianificaUrnNormattivaDaRiferimento(riferimento, normalized)),
         ...pianificaUrnNormattivaDaTema(normalized)
     ]);
 }
@@ -1434,24 +1473,53 @@ function calcolaPunteggioLessicale(domanda, tokensDomanda, testo, metadati, rife
     return score;
 }
 function estraiRiferimentoDomanda(domanda) {
-    const normalized = normalizza(domanda).replace(/\s+/g, " ").trim();
-    const articolo = estraiArticolo(normalized);
+    return estraiRiferimentiNormativiDomanda(domanda)[0] ?? {};
+}
+function estraiRiferimentiNormativiDomanda(domanda) {
+    const normalized = normalizza(testoPerRiferimentiNormativi(domanda)).replace(/\s+/g, " ").trim();
+    const articoli = estraiArticoliEspliciti(normalized);
     const comma = estraiComma(normalized);
     const atto = estraiAtto(normalized);
     const concetto = estraiConcettoNormativo(normalized);
-    return {
+    const base = {
         ...concetto,
-        ...atto,
-        articolo: articolo ?? concetto.articolo,
+        ...atto
+    };
+    if (articoli.length > 0) {
+        return articoli.map((articolo) => ({
+            ...base,
+            articolo,
+            comma: articoli.length === 1 ? comma ?? concetto.comma : undefined
+        }));
+    }
+    const riferimento = {
+        ...base,
+        articolo: concetto.articolo,
         comma: comma ?? concetto.comma
     };
+    return haRiferimentoNormativoAzionabile(riferimento) ? [riferimento] : [];
 }
 const SUFFISSO_NORMATIVO = "(?:bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies)";
 const ARTICOLO_REGEX = new RegExp(`\\bart(?:icolo)?\\.?\\s+([0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?)\\b`);
+const ARTICOLO_GLOBALE_REGEX = new RegExp(`\\bart(?:icolo)?\\.?\\s+([0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?)\\b`, "g");
+const ARTICOLI_LISTA_REGEX = new RegExp(`\\bartt?\\.?\\s+([0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?(?:\\s*(?:,|e|ed)\\s*[0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?)*)\\b`, "g");
+const NUMERO_ARTICOLO_REGEX = new RegExp(`[0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?`, "g");
 const COMMA_REGEX = new RegExp(`\\b(?:comma|co\\.?)\\s+([0-9]+(?:\\s*[- ]?\\s*${SUFFISSO_NORMATIVO})?)\\b`);
 function estraiArticolo(normalized) {
     const match = normalized.match(ARTICOLO_REGEX);
     return normalizzaIdentificatoreNormativo(match?.[1]);
+}
+function estraiArticoliEspliciti(normalized) {
+    const articoli = [];
+    for (const match of normalized.matchAll(ARTICOLO_GLOBALE_REGEX)) {
+        articoli.push(match[1]);
+    }
+    for (const match of normalized.matchAll(ARTICOLI_LISTA_REGEX)) {
+        for (const numero of (match[1] ?? "").matchAll(NUMERO_ARTICOLO_REGEX)) {
+            articoli.push(numero[0]);
+        }
+    }
+    return uniqueStrings(articoli.map((articolo) => normalizzaIdentificatoreNormativo(articolo)));
 }
 function estraiComma(normalized) {
     const match = normalized.match(COMMA_REGEX);
@@ -1464,10 +1532,10 @@ function estraiAtto(normalized) {
             numeroAtto: "262"
         };
     }
-    if (isCodicePenaleAlias(normalized)) {
+    if (isCodiceProceduraPenaleAlias(normalized)) {
         return {
-            annoAtto: "1930",
-            numeroAtto: "1398"
+            annoAtto: "1988",
+            numeroAtto: "447"
         };
     }
     if (isCodiceProceduraCivileAlias(normalized)) {
@@ -1476,10 +1544,10 @@ function estraiAtto(normalized) {
             numeroAtto: "1443"
         };
     }
-    if (isCodiceProceduraPenaleAlias(normalized)) {
+    if (isCodicePenaleAlias(normalized)) {
         return {
-            annoAtto: "1988",
-            numeroAtto: "447"
+            annoAtto: "1930",
+            numeroAtto: "1398"
         };
     }
     if (isCodiceProcessoAmministrativoAlias(normalized)) {
@@ -1678,7 +1746,7 @@ function isCodiceCivileAlias(normalized) {
 function isCodicePenaleAlias(normalized) {
     return (/\bcodice\s+penale\b/.test(normalized) ||
         /\bcod\.?\s*pen\.?\b/.test(normalized) ||
-        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?(?!\s*c)(?=$|[^a-z0-9])/.test(normalized));
+        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?(?!\s*\.?\s*[cp])(?=$|[^a-z0-9])/.test(normalized));
 }
 function isCodiceProceduraCivileAlias(normalized) {
     return (/\bcodice\s+(?:di\s+)?procedura\s+civile\b/.test(normalized) ||
@@ -1946,6 +2014,22 @@ function normalizza(input) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 }
+function testoPerRiferimentiNormativi(domanda) {
+    const [primaDelDocumento] = domanda.split(/\n\s*(?:fascicolo allegato|documento allegato|riepilogo documento|clausole rilevanti|riferimenti individuati nel documento)\b/i);
+    const candidate = primaDelDocumento?.trim();
+    if (candidate && haSegnaliRiferimentoNormativo(candidate)) {
+        return candidate;
+    }
+    return domanda;
+}
+function haSegnaliRiferimentoNormativo(value) {
+    const normalized = normalizza(value);
+    return (/\bartt?\.?\s+[0-9]/.test(normalized) ||
+        /\barticolo\s+[0-9]/.test(normalized) ||
+        /\bcodice\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*[cp]\s*\.?/.test(normalized) ||
+        /\b(?:legge|l\.?|d\.?\s*lgs\.?|d\.?\s*p\.?\s*r\.?|dpr|decreto)\b/.test(normalized));
+}
 function hashBreve(value) {
     return createHash("sha256").update(value, "utf8").digest("hex").slice(0, 12);
 }
@@ -1957,6 +2041,8 @@ function parseActType(value) {
     if (normalized === "legge" ||
         normalized === "decreto-legge" ||
         normalized === "decreto-legislativo" ||
+        normalized === "decreto-presidente-repubblica" ||
+        normalized === "regio-decreto" ||
         normalized === "codice" ||
         normalized === "regolamento" ||
         normalized === "trattato-ue") {

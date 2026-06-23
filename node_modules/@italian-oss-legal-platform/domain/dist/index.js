@@ -65,6 +65,9 @@ function formatActTypeForLabel(metadata) {
     if (metadata.eli.includes("/decreto-legge/")) {
         return "decreto legge";
     }
+    if (metadata.eli.includes("/decreto-presidente-repubblica/")) {
+        return "D.P.R.";
+    }
     if (metadata.tipoAtto === "trattato-ue" || metadata.eli.includes("/treaty/")) {
         return "trattato UE";
     }

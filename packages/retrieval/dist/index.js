@@ -1,6 +1,6 @@
-import { createCitationLabel, isVersionActiveAt } from "@italian-oss-legal-platform/domain";
-import { parseCorpusDimostrativo } from "@italian-oss-legal-platform/ingest";
-import { EmbeddingDeterministico, GeneratoreRispostaStub, similaritaCoseno } from "@italian-oss-legal-platform/llm";
+import { createCitationLabel, isVersionActiveAt } from "../../domain/dist/index.js";
+import { parseCorpusDimostrativo } from "../../ingest/dist/index.js";
+import { EmbeddingDeterministico, GeneratoreRispostaStub, similaritaCoseno } from "../../llm/dist/index.js";
 const STOP_WORDS = new Set([
     "a",
     "ad",

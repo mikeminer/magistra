@@ -1,4 +1,4 @@
-import { fontiCatalogabili } from "@italian-oss-legal-platform/sources";
+import { fontiCatalogabili } from "../../sources/dist/index.js";
 import pg from "pg";
 export async function leggiStatoIngestDaEnv(env = process.env) {
     if (!env.DATABASE_URL) {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createChunk } from "@italian-oss-legal-platform/domain";
+import { createChunk } from "../../domain/dist/index.js";
 import { XMLParser } from "fast-xml-parser";
 export const NORMATTIVA_LEGGE_241_ESEMPIO_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <akomaNtoso xmlns="http://docs.oasis-open.org/legaldocml/ns/akn/3.0">
