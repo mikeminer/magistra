@@ -2,8 +2,8 @@
 type: Concetto
 title: Ambito MVP
 description: Le funzionalità minime della prima release, sufficienti a dimostrare il valore della piattaforma, e ciò che resta esplicitamente fuori.
-tags: [mvp, ambito, prioritizzazione]
-timestamp: 2026-06-20T00:00:00Z
+tags: [mvp, ambito, prioritizzazione, desktop]
+timestamp: 2026-06-23T00:00:00Z
 ---
 
 # Ambito MVP
@@ -15,11 +15,12 @@ Definisce il **minimo prodotto utile** della prima release: abbastanza da rispon
 ## Dentro l'MVP (proposta)
 
 - Ingest di un sottoinsieme del corpus da [Normattiva](/fonti/normattiva.md) tramite la [pipeline di trasformazione](/modello-dati/pipeline-trasformazione.md).
+- Distribuzione con corpus locale già indicizzato o snapshot aggiornabile, così l'utente non deve eseguire l'ingest completo.
 - [Assistente legale (chat)](/funzionalita/assistente-legale.md) con [citazioni verificabili](/glossario/citazione-verificabile.md).
 - [Ricerca normativa](/funzionalita/ricerca-normativa.md) semantica e per parola chiave.
 - [Analisi di documenti](/funzionalita/analisi-documenti.md) caricati dall'utente.
 - [Gestione delle API key](/architettura/gestione-api-key.md) e [provider LLM configurabile](/architettura/provider-llm.md).
-- Esecuzione **single-utente** self-hostata (vedi [deployment](/architettura/deployment.md)).
+- Esecuzione **single-utente** come desktop app o self-hosted tecnico (vedi [deployment](/architettura/deployment.md)).
 
 ## Fuori dall'MVP (fasi successive)
 
