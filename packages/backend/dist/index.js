@@ -31,10 +31,13 @@ export async function rispondiConFontiDatabase(domanda, env = process.env) {
         };
         const embeddingProvider = creaEmbeddingProviderDaEnv(env);
         const generatore = creaGeneratoreRispostaDaEnv(env);
-        if (risultati.length === 0) {
+        if (risultati.length === 0 || deveTentareRecuperoFontiOnline(domanda, risultati)) {
             recuperoFontiOnline = await tentaRecuperoFontiOnlineSuMiss(domanda, database, env);
             if (recuperoFontiOnline.stato === "riuscito") {
                 risultati = await cercaChunkDatabase(domanda, database, env);
+            }
+            else if (risultati.length > 0 && deveScartareRisultatiNonMirati(domanda, risultati)) {
+                risultati = [];
             }
         }
         if (risultati.length === 0) {
@@ -776,6 +779,53 @@ async function tentaRecuperoFontiOnlineSuMiss(domanda, database, env) {
         };
     }
 }
+function deveTentareRecuperoFontiOnline(domanda, risultati) {
+    const urns = pianificaUrnNormattivaPerRecupero(domanda);
+    if (urns.length === 0 || risultati.length === 0) {
+        return urns.length > 0;
+    }
+    const riferimento = estraiRiferimentoDomanda(domanda);
+    if (!haRiferimentoNormativoAzionabile(riferimento)) {
+        return false;
+    }
+    return !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento));
+}
+function deveScartareRisultatiNonMirati(domanda, risultati) {
+    const riferimento = estraiRiferimentoDomanda(domanda);
+    return (haRiferimentoNormativoAzionabile(riferimento) &&
+        risultati.length > 0 &&
+        !risultati.some((risultato) => metadatiSoddisfanoRiferimento(risultato.metadati, riferimento)));
+}
+function haRiferimentoNormativoAzionabile(riferimento) {
+    return Boolean(riferimento.fonte ||
+        riferimento.tipoAtto ||
+        riferimento.numeroAtto ||
+        riferimento.annoAtto ||
+        riferimento.articolo);
+}
+function metadatiSoddisfanoRiferimento(metadati, riferimento) {
+    if (riferimento.fonte && metadati.fonte !== riferimento.fonte) {
+        return false;
+    }
+    if (riferimento.tipoAtto && metadati.tipoAtto !== riferimento.tipoAtto) {
+        return false;
+    }
+    if (riferimento.numeroAtto && metadati.numeroAtto !== riferimento.numeroAtto) {
+        return false;
+    }
+    if (riferimento.annoAtto && !metadati.dataAtto.startsWith(riferimento.annoAtto)) {
+        return false;
+    }
+    if (riferimento.articolo &&
+        normalizzaIdentificatoreNormativo(metadati.articolo) !== riferimento.articolo) {
+        return false;
+    }
+    if (riferimento.comma &&
+        normalizzaComma(metadati.comma) !== normalizzaComma(riferimento.comma)) {
+        return false;
+    }
+    return true;
+}
 async function importaUrnNormattivaTramiteWorker(urns, env) {
     const workerCli = env.ONLINE_SOURCE_RECOVERY_WORKER_CLI ??
         fileURLToPath(new URL("../../worker/dist/cli.js", import.meta.url));
@@ -922,6 +972,12 @@ function pianificaUrnNormattivaDaTema(normalized) {
     if (normalized.includes("onere della prova") || normalized.includes("onere probatorio")) {
         urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile, "2697"));
     }
+    if (isDomandaSuClausoleVessatorie(normalized)) {
+        urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile, "1341"));
+        if (normalized.includes("formular") || normalized.includes("modul") || normalized.includes("standard")) {
+            urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile, "1342"));
+        }
+    }
     if (isDomandaSuIgnoranzaLeggePenale(normalized)) {
         urns.push(creaUrnNormattiva(ATTI_NORMATTIVA_CONOSCIUTI.codicePenale, "5"));
     }
@@ -942,6 +998,42 @@ const ATTI_NORMATTIVA_CONOSCIUTI = {
         dataAtto: "1930-10-19",
         numeroAtto: "1398",
         tipoAttoUrn: "regio.decreto"
+    },
+    codiceProceduraCivile: {
+        annoAtto: "1940",
+        dataAtto: "1940-10-28",
+        numeroAtto: "1443",
+        tipoAttoUrn: "regio.decreto"
+    },
+    codiceProceduraPenale: {
+        annoAtto: "1988",
+        dataAtto: "1988-09-22",
+        numeroAtto: "447",
+        tipoAttoUrn: "decreto.presidente.repubblica"
+    },
+    codiceProcessoAmministrativo: {
+        annoAtto: "2010",
+        dataAtto: "2010-07-02",
+        numeroAtto: "104",
+        tipoAttoUrn: "decreto.legislativo"
+    },
+    codiceAmministrazioneDigitale: {
+        annoAtto: "2005",
+        dataAtto: "2005-03-07",
+        numeroAtto: "82",
+        tipoAttoUrn: "decreto.legislativo"
+    },
+    codiceContrattiPubblici: {
+        annoAtto: "2023",
+        dataAtto: "2023-03-31",
+        numeroAtto: "36",
+        tipoAttoUrn: "decreto.legislativo"
+    },
+    codicePrivacy: {
+        annoAtto: "2003",
+        dataAtto: "2003-06-30",
+        numeroAtto: "196",
+        tipoAttoUrn: "decreto.legislativo"
     },
     decreto33_2013: {
         annoAtto: "2013",
@@ -979,11 +1071,29 @@ function attoNormattivaConosciuto(riferimento, normalized) {
     if (match) {
         return match;
     }
-    if (/\bcodice\s+civile\b/.test(normalized)) {
+    if (isCodiceCivileAlias(normalized)) {
         return ATTI_NORMATTIVA_CONOSCIUTI.codiceCivile;
     }
-    if (/\bcodice\s+penale\b/.test(normalized)) {
+    if (isCodicePenaleAlias(normalized)) {
         return ATTI_NORMATTIVA_CONOSCIUTI.codicePenale;
+    }
+    if (isCodiceProceduraCivileAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraCivile;
+    }
+    if (isCodiceProceduraPenaleAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceProceduraPenale;
+    }
+    if (isCodiceProcessoAmministrativoAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceProcessoAmministrativo;
+    }
+    if (isCodiceAmministrazioneDigitaleAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceAmministrazioneDigitale;
+    }
+    if (isCodiceContrattiPubbliciAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codiceContrattiPubblici;
+    }
+    if (isCodicePrivacyAlias(normalized)) {
+        return ATTI_NORMATTIVA_CONOSCIUTI.codicePrivacy;
     }
     return undefined;
 }
@@ -1023,6 +1133,10 @@ function tipoAttoNormattivaPerUrn(tipoAtto, normalized) {
     if (tipoAtto === "decreto-legge" ||
         /\b(?:decreto legge|d\.?\s*l\.?|dl)\b/.test(normalized)) {
         return "decreto.legge";
+    }
+    if (tipoAtto === "decreto-presidente-repubblica" ||
+        /\b(?:decreto del presidente della repubblica|d\.?\s*p\.?\s*r\.?|dpr)\b/.test(normalized)) {
+        return "decreto.presidente.repubblica";
     }
     if (tipoAtto === "regolamento" || /\bregolamento\b/.test(normalized)) {
         return "regolamento";
@@ -1344,16 +1458,56 @@ function estraiComma(normalized) {
     return normalizzaIdentificatoreNormativo(match?.[1]);
 }
 function estraiAtto(normalized) {
-    if (/\bcodice\s+civile\b/.test(normalized)) {
+    if (isCodiceCivileAlias(normalized)) {
         return {
             annoAtto: "1942",
             numeroAtto: "262"
         };
     }
-    if (/\bcodice\s+penale\b/.test(normalized)) {
+    if (isCodicePenaleAlias(normalized)) {
         return {
             annoAtto: "1930",
             numeroAtto: "1398"
+        };
+    }
+    if (isCodiceProceduraCivileAlias(normalized)) {
+        return {
+            annoAtto: "1940",
+            numeroAtto: "1443"
+        };
+    }
+    if (isCodiceProceduraPenaleAlias(normalized)) {
+        return {
+            annoAtto: "1988",
+            numeroAtto: "447"
+        };
+    }
+    if (isCodiceProcessoAmministrativoAlias(normalized)) {
+        return {
+            annoAtto: "2010",
+            numeroAtto: "104",
+            tipoAtto: "decreto-legislativo"
+        };
+    }
+    if (isCodiceAmministrazioneDigitaleAlias(normalized)) {
+        return {
+            annoAtto: "2005",
+            numeroAtto: "82",
+            tipoAtto: "decreto-legislativo"
+        };
+    }
+    if (isCodiceContrattiPubbliciAlias(normalized)) {
+        return {
+            annoAtto: "2023",
+            numeroAtto: "36",
+            tipoAtto: "decreto-legislativo"
+        };
+    }
+    if (isCodicePrivacyAlias(normalized)) {
+        return {
+            annoAtto: "2003",
+            numeroAtto: "196",
+            tipoAtto: "decreto-legislativo"
         };
     }
     const leggeConDataTestuale = normalized.match(/\b(?:legge|l\.?)\s+\d{1,2}\s+(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+([0-9]{4})\s*,?\s*(?:n\.?\s*)?([0-9]+)\b/);
@@ -1372,6 +1526,10 @@ function estraiAtto(normalized) {
         {
             regex: /\b(?:decreto\s+legge|d\s*\.?\s*l\s*\.?|dl)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
             tipoAtto: "decreto-legge"
+        },
+        {
+            regex: /\b(?:decreto\s+del\s+presidente\s+della\s+repubblica|d\s*\.?\s*p\s*\.?\s*r\s*\.?|dpr)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
+            tipoAtto: "decreto-presidente-repubblica"
         },
         {
             regex: /\b(?:legge|l\s*\.?)\s*(?:n\s*\.?\s*)?([0-9]+)\s*(?:\/|\s+|del(?:l'anno)?\s+)([0-9]{4})\b/,
@@ -1461,6 +1619,14 @@ function estraiConcettoNormativo(normalized) {
             numeroAtto: "262"
         };
     }
+    if (isDomandaSuClausoleVessatorie(normalized)) {
+        return {
+            annoAtto: "1942",
+            articolo: normalized.includes("formular") || normalized.includes("modul") ? "1342" : "1341",
+            comma: normalized.includes("comma 2") || normalized.includes("comma secondo") ? "2" : undefined,
+            numeroAtto: "262"
+        };
+    }
     if (isDomandaSuIgnoranzaLeggePenale(normalized)) {
         return {
             annoAtto: "1930",
@@ -1503,6 +1669,57 @@ function isDomandaSuGiurisprudenzaAperta(normalized) {
         normalized.includes("silenzio pa") ||
         normalized.includes("silenzio amministrativo") ||
         normalized.includes("consiglio di stato"));
+}
+function isCodiceCivileAlias(normalized) {
+    return (/\bcodice\s+civile\b/.test(normalized) ||
+        /\bcod\.?\s*civ\.?\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*c\s*\.?(?=$|[^a-z0-9])/.test(normalized));
+}
+function isCodicePenaleAlias(normalized) {
+    return (/\bcodice\s+penale\b/.test(normalized) ||
+        /\bcod\.?\s*pen\.?\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?(?!\s*c)(?=$|[^a-z0-9])/.test(normalized));
+}
+function isCodiceProceduraCivileAlias(normalized) {
+    return (/\bcodice\s+(?:di\s+)?procedura\s+civile\b/.test(normalized) ||
+        /\bcod\.?\s*proc\.?\s*civ\.?\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?\s*c\s*\.?(?=$|[^a-z0-9])/.test(normalized));
+}
+function isCodiceProceduraPenaleAlias(normalized) {
+    return (/\bcodice\s+(?:di\s+)?procedura\s+penale\b/.test(normalized) ||
+        /\bcod\.?\s*proc\.?\s*pen\.?\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?\s*p\s*\.?(?=$|[^a-z0-9])/.test(normalized));
+}
+function isCodiceProcessoAmministrativoAlias(normalized) {
+    return (/\bcodice\s+(?:del\s+)?processo\s+amministrativo\b/.test(normalized) ||
+        /(?:^|[^a-z0-9])c\s*\.?\s*p\s*\.?\s*a\s*\.?(?=$|[^a-z0-9])/.test(normalized));
+}
+function isCodiceAmministrazioneDigitaleAlias(normalized) {
+    return /\bcodice\s+(?:dell'?|della\s+)?amministrazione\s+digitale\b|\bcad\b/.test(normalized);
+}
+function isCodiceContrattiPubbliciAlias(normalized) {
+    return (/\bcodice\s+(?:dei\s+)?contratti\s+pubblici\b/.test(normalized) ||
+        normalized.includes("appalti pubblici") ||
+        normalized.includes("contratti pubblici"));
+}
+function isCodicePrivacyAlias(normalized) {
+    return (/\bcodice\s+(?:in\s+materia\s+di\s+protezione\s+dei\s+dati\s+personali|privacy)\b/.test(normalized) ||
+        normalized.includes("protezione dati personali"));
+}
+function isDomandaSuClausoleVessatorie(normalized) {
+    return ((normalized.includes("clausol") &&
+        (normalized.includes("vessator") ||
+            normalized.includes("specifica approvazione") ||
+            normalized.includes("approvazione per iscritto") ||
+            normalized.includes("condizioni generali"))) ||
+        normalized.includes("recesso unilaterale") ||
+        normalized.includes("facolta di recedere") ||
+        normalized.includes("facoltà di recedere") ||
+        normalized.includes("limitazione di responsabilita") ||
+        normalized.includes("limitazioni di responsabilita") ||
+        normalized.includes("deroga alla competenza") ||
+        normalized.includes("tacita proroga") ||
+        normalized.includes("decadenze a carico"));
 }
 function isDomandaSuFunzioneRiferimentiIncrociati(normalized) {
     const chiedeCapacita = normalized.includes("puoi") ||

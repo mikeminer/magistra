@@ -342,6 +342,9 @@ function garantisciCitazioniRecuperate(testo, richiesta) {
     if (contieneSoloSchedeOpenGa(richiesta)) {
         return creaRispostaControllataOpenGa(richiesta);
     }
+    if (isDomandaSuClausoleVessatorie(richiesta)) {
+        return creaRispostaControllataClausoleVessatorie(richiesta);
+    }
     if (contieneCitazioneTestualeNonSupportata(testoSenzaCitazioniInventate, richiesta)) {
         return creaRispostaControllataDaFonti(richiesta);
     }
@@ -447,6 +450,35 @@ function creaRispostaControllataDurataLocazione(richiesta) {
 function markerFonte(richiesta, predicate) {
     const index = richiesta.fonti.findIndex(predicate);
     return index >= 0 ? `[F${index + 1}]` : undefined;
+}
+function isDomandaSuClausoleVessatorie(richiesta) {
+    const domanda = normalizzaPerConfronto(richiesta.domanda);
+    return ((domanda.includes("1341") ||
+        domanda.includes("clausol") ||
+        domanda.includes("recesso unilaterale") ||
+        domanda.includes("facolta di recedere")) &&
+        (domanda.includes("specifica approvazione") ||
+            domanda.includes("approvazione per iscritto") ||
+            domanda.includes("vessator") ||
+            domanda.includes("condizioni generali") ||
+            domanda.includes("recesso")));
+}
+function creaRispostaControllataClausoleVessatorie(richiesta) {
+    const marker = markerFonte(richiesta, (fonte) => fonte.metadati.fonte === "Normattiva" &&
+        fonte.metadati.numeroAtto === "262" &&
+        fonte.metadati.articolo === "1341") ?? "[F1]";
+    const domanda = normalizzaPerConfronto(richiesta.domanda);
+    const haContestoDocumento = domanda.includes("documento allegato:") ||
+        domanda.includes("riepilogo documento:") ||
+        domanda.includes("clausole rilevanti:");
+    return [
+        "L'art. 1341, comma 2, c.c. richiede specifica approvazione per iscritto per alcune condizioni predisposte da uno dei contraenti.",
+        `Tra queste rientrano anche le condizioni che attribuiscono al predisponente la facolta di recedere dal contratto o di sospenderne l'esecuzione ${marker}.`,
+        haContestoDocumento
+            ? `Quindi, se la clausola di recesso unilaterale del documento attribuisce quella facolta al predisponente, va trattata come clausola soggetta a specifica approvazione scritta ${marker}.`
+            : "Non ho nel contesto il testo della clausola allegata: posso indicare la regola generale, ma la verifica puntuale richiede il testo della clausola.",
+        `La risposta resta limitata alla fonte recuperata ${marker}.`
+    ].join(" ");
 }
 function contieneIdentificativoEuropeoSospetto(testo, richiesta) {
     const identificativiConsentiti = new Set(richiesta.fonti

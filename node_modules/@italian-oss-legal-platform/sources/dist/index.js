@@ -194,6 +194,9 @@ export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fe
         method: "POST"
     });
     if (!response.ok) {
+        if (urn.includes("~art")) {
+            return await scaricaAttoNormattivaDaPaginaClassica(adapter, urn, fetchImpl, response);
+        }
         throw new Error(`Download dettaglio Normattiva fallito (${response.status} ${response.statusText}): ${urn}`);
     }
     const payload = parseNormattivaOpenDataPayload(await response.text(), urn);
@@ -207,6 +210,95 @@ export async function scaricaAttoNormattivaOpenData(adapter, urn, fetchImpl = fe
 }
 export function creaUrlNormattivaDaUrn(urn) {
     return `${NORMATTIVA_BASE_URL}/uri-res/N2Ls?${urn}`;
+}
+async function scaricaAttoNormattivaDaPaginaClassica(adapter, urn, fetchImpl, previousResponse) {
+    const articolo = estraiArticoloDaUrn(urn);
+    if (!articolo) {
+        throw new Error(`Download dettaglio Normattiva fallito (${previousResponse.status} ${previousResponse.statusText}): ${urn}`);
+    }
+    const sourceUrl = creaUrlNormattivaDaUrn(urn);
+    const pageResponse = await fetchImpl(sourceUrl, {
+        headers: {
+            accept: "text/html,application/xhtml+xml",
+            "user-agent": "MagistraOS/0.1 (+https://github.com/mikeminer/Italian-OSS-Legal-Platform)"
+        },
+        method: "GET"
+    });
+    if (!pageResponse.ok) {
+        throw new Error(`Fallback HTML Normattiva fallito (${pageResponse.status} ${pageResponse.statusText}): ${urn}`);
+    }
+    const cookie = creaCookieHeader(pageResponse.headers);
+    const pageHtml = await pageResponse.text();
+    const articoloUrl = trovaUrlArticoloNormattiva(pageHtml, articolo);
+    if (!articoloUrl) {
+        throw new Error(`Fallback HTML Normattiva non ha trovato l'articolo ${articolo}: ${urn}`);
+    }
+    const detailUrl = new URL(articoloUrl.replace(/&amp;/g, "&"), NORMATTIVA_BASE_URL).toString();
+    const detailResponse = await fetchImpl(detailUrl, {
+        headers: {
+            accept: "text/html,*/*",
+            cookie,
+            referer: sourceUrl,
+            "user-agent": "MagistraOS/0.1 (+https://github.com/mikeminer/Italian-OSS-Legal-Platform)"
+        },
+        method: "GET"
+    });
+    if (!detailResponse.ok) {
+        throw new Error(`Fallback HTML articolo Normattiva fallito (${detailResponse.status} ${detailResponse.statusText}): ${urn}`);
+    }
+    const articoloHtml = await detailResponse.text();
+    const xml = convertiDettaglioNormattivaInAkomaNtoso({
+        articoloDataInizioVigenza: estraiVersionDateNormattiva(pageHtml),
+        articoloHtml,
+        sottoTitolo: estraiMetaDescriptionNormattiva(pageHtml),
+        titolo: estraiTitleNormattiva(pageHtml)
+    }, urn);
+    return {
+        contentType: "application/akn+xml",
+        fonte: adapter.fonte,
+        sourceUrl,
+        xml
+    };
+}
+function estraiArticoloDaUrn(urn) {
+    return normalizzaIdentificatoreArticolo(urn.match(/~art([0-9]+(?:[-_][a-z]+)?)/i)?.[1]);
+}
+function trovaUrlArticoloNormattiva(html, articolo) {
+    const target = normalizzaIdentificatoreArticolo(articolo);
+    const regex = /showArticle\('([^']+)'[^)]*\)[^>]*class="numero_articolo"[^>]*>([\s\S]*?)<\/a>/gi;
+    for (const match of html.matchAll(regex)) {
+        const label = normalizzaIdentificatoreArticolo(cleanHtmlText(match[2] ?? "").replace(/^art\.?\s*/i, ""));
+        if (label === target) {
+            return match[1];
+        }
+    }
+    return undefined;
+}
+function normalizzaIdentificatoreArticolo(value) {
+    return value?.replace(/_/g, "-").replace(/\s*-\s*/g, "-").replace(/\s+/g, "").toLowerCase();
+}
+function creaCookieHeader(headers) {
+    const headerRecord = headers;
+    const values = typeof headerRecord.getSetCookie === "function"
+        ? headerRecord.getSetCookie()
+        : splitSetCookieHeader(headers.get("set-cookie"));
+    return values.map((cookie) => cookie.split(";", 1)[0]).filter(Boolean).join("; ");
+}
+function splitSetCookieHeader(value) {
+    if (!value) {
+        return [];
+    }
+    return value.split(/,(?=\s*[^;,]+=)/g).map((cookie) => cookie.trim()).filter(Boolean);
+}
+function estraiTitleNormattiva(html) {
+    return cleanHtmlText(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? "Normattiva");
+}
+function estraiMetaDescriptionNormattiva(html) {
+    return cleanHtmlText(html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)?.[1] ?? "");
+}
+function estraiVersionDateNormattiva(html) {
+    const value = html.match(/property=["']eli:version_date["'][^>]*content=["'](\d{4})-(\d{2})-(\d{2})["']/i);
+    return value ? `${value[1]}${value[2]}${value[3]}` : undefined;
 }
 async function fetchConFallbackCaLocale(url, init) {
     try {
@@ -375,6 +467,10 @@ function parseUrnNormattiva(urn, atto) {
 function estraiArticoliDaHtmlNormattiva(html) {
     const articleHeadingRegex = /<h2[^>]*class="[^"]*article-num-akn[^"]*"[^>]*>([\s\S]*?)<\/h2>/gi;
     const matches = [...html.matchAll(articleHeadingRegex)];
+    if (matches.length === 0) {
+        const articoloAttachment = estraiArticoloAttachmentDaHtmlNormattiva(html);
+        return articoloAttachment ? [articoloAttachment] : [];
+    }
     return matches
         .map((match, index) => {
         const start = (match.index ?? 0) + match[0].length;
@@ -402,6 +498,37 @@ function estraiArticoliDaHtmlNormattiva(html) {
         };
     })
         .filter((articolo) => articolo.numero && articolo.commi.length > 0);
+}
+function estraiArticoloAttachmentDaHtmlNormattiva(html) {
+    const block = html.match(/<span[^>]*class="[^"]*attachment-just-text[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
+    if (!block) {
+        return undefined;
+    }
+    const righe = decodeHtmlEntities(block
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/div>/gi, "\n")
+        .replace(/<[^>]+>/g, " "))
+        .replace(/\(\(/g, "")
+        .replace(/\)\)/g, "")
+        .split(/\n+/)
+        .map((riga) => normalizzaSpazi(riga))
+        .filter(Boolean);
+    const articoloRiga = righe.find((riga) => /^art\.?\s+/i.test(riga));
+    const numero = articoloRiga?.match(/^art\.?\s*([0-9]+(?:\s*[- ]?\s*[a-z]+)?)/i)?.[1]?.replace(/\s*-\s*/g, "-");
+    const rubrica = righe.find((riga) => /^\(.+\)\.?$/.test(riga))?.replace(/^\(|\)\.?$/g, "");
+    const commi = righe
+        .filter((riga) => riga !== articoloRiga && riga !== `(${rubrica}).` && riga !== `(${rubrica})`)
+        .map((testo, index) => ({
+        numero: String(index + 1),
+        testo
+    }));
+    return numero && commi.length > 0
+        ? {
+            commi,
+            numero,
+            rubrica
+        }
+        : undefined;
 }
 function cleanHtmlText(value) {
     return normalizzaSpazi(decodeHtmlEntities(value
