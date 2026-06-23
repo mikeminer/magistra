@@ -70,6 +70,10 @@
         "to": "magistra-runtime/schema.sql"
       },
       {
+        "from": "install-light-llm.ps1",
+        "to": "install-light-llm.ps1"
+      },
+      {
         "from": "snapshots",
         "to": "magistra-runtime/snapshots",
         "filter": [
@@ -95,6 +99,7 @@
       "artifactName": "Magistra-Setup-${version}.${ext}"
     },
     "nsis": {
+      "include": "installer.nsh",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,

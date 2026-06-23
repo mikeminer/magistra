@@ -532,7 +532,7 @@ async function buildServerEnv(root, port) {
     OBJECT_STORAGE_DIR: storageDir,
     LLM_PROVIDER: fileEnv.LLM_PROVIDER || process.env.LLM_PROVIDER || "ollama",
     LLM_BASE_URL: resolveDesktopLlmBaseUrl(fileEnv),
-    LLM_MODEL: fileEnv.LLM_MODEL || process.env.LLM_MODEL || "llama3.2:latest",
+    LLM_MODEL: fileEnv.LLM_MODEL || process.env.LLM_MODEL || "llama3.2:1b",
     LLM_API_FORMAT: fileEnv.LLM_API_FORMAT || process.env.LLM_API_FORMAT || "chat",
     LLM_TEMPERATURE: fileEnv.LLM_TEMPERATURE || process.env.LLM_TEMPERATURE || "0.1",
     LLM_MAX_OUTPUT_TOKENS: fileEnv.LLM_MAX_OUTPUT_TOKENS || process.env.LLM_MAX_OUTPUT_TOKENS || "700",
