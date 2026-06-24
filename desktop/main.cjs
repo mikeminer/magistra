@@ -296,8 +296,12 @@ async function restorePgliteBundledSnapshot(root, database, env) {
   const digest = hashFile(filePath);
   const marker = path.join(app.getPath("userData"), `snapshot-${digest}.pglite.restored`);
   if (fs.existsSync(marker)) {
-    appendLog("pglite.log", `snapshot gia' ripristinato in PGlite: ${path.basename(filePath)}`);
-    return false;
+    const chunkCount = await countPgliteChunks(database);
+    if (chunkCount > 0) {
+      appendLog("pglite.log", `snapshot gia' ripristinato in PGlite: ${path.basename(filePath)}; chunks=${chunkCount}`);
+      return false;
+    }
+    appendLog("pglite.log", "marker snapshot presente ma DB PGlite vuoto: ripristino forzato");
   }
   const restoredRows = await restorePgliteCopyDump(database, fs.readFileSync(filePath, "utf8"));
   fs.writeFileSync(marker, new Date().toISOString(), "utf8");
@@ -510,11 +514,15 @@ function waitForHttp(url, timeoutMs = 90000) {
 }
 
 async function buildServerEnv(root, port) {
-  const fileEnv = readEnvFile(path.join(root, ".env"));
+  const fileEnv = readEnvFile(app.isPackaged
+    ? path.join(app.getPath("userData"), "magistra.env")
+    : path.join(root, ".env"));
   const storageDir = path.join(app.getPath("userData"), "storage");
   fs.mkdirSync(storageDir, { recursive: true });
   const certPath = path.join(root, "certs", "local-ca.pem");
-  const hasConfiguredDatabaseUrl = Boolean(process.env.DATABASE_URL || fileEnv.DATABASE_URL);
+  const desktopDbMode = String(fileEnv.MAGISTRA_DESKTOP_DB_MODE || process.env.MAGISTRA_DESKTOP_DB_MODE || "pglite").toLowerCase();
+  const allowExternalDatabase = desktopDbMode === "external";
+  const hasConfiguredDatabaseUrl = allowExternalDatabase && Boolean(process.env.DATABASE_URL || fileEnv.DATABASE_URL);
   const pgliteDatabase = !hasConfiguredDatabaseUrl
     ? await startPgliteDatabase(root, fileEnv)
     : undefined;
@@ -529,7 +537,9 @@ async function buildServerEnv(root, port) {
     NEXT_TELEMETRY_DISABLED: "1",
     PORT: String(port),
     ONLINE_SOURCE_RECOVERY_ENABLED: "true",
+    ONLINE_SOURCE_RECOVERY_API_FALLBACK: "true",
     OBJECT_STORAGE_DIR: storageDir,
+    MAGISTRA_RUNTIME_ROOT: root,
     LLM_PROVIDER: fileEnv.LLM_PROVIDER || process.env.LLM_PROVIDER || "ollama",
     LLM_BASE_URL: resolveDesktopLlmBaseUrl(fileEnv),
     LLM_MODEL: fileEnv.LLM_MODEL || process.env.LLM_MODEL || "llama3.2:1b",
@@ -559,6 +569,9 @@ async function buildServerEnv(root, port) {
   }
   if (fs.existsSync(certPath)) {
     env.NODE_EXTRA_CA_CERTS = certPath;
+  }
+  else {
+    delete env.NODE_EXTRA_CA_CERTS;
   }
   env.MAGISTRA_DESKTOP_NEEDS_BOOTSTRAP_INGEST =
     portableDatabase && portableDatabase.chunkCount === 0 && !portableDatabase.restoredSnapshot

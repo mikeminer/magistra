@@ -86,10 +86,6 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "../.env",
-        "to": "magistra-runtime/.env"
       }
     ],
     "win": {
