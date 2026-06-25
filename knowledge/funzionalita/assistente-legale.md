@@ -20,6 +20,7 @@ La funzionalità centrale della piattaforma: un'interfaccia di **chat** in cui l
 - Mantiene il contesto della [conversazione](/modello-dati/conversazione.md) (domande di follow-up).
 - Può operare **dentro un [progetto](/funzionalita/progetti.md)**, usando come contesto i documenti caricati dall'utente oltre al corpus normativo.
 - Può eseguire azioni sui documenti: [analizzarli](/funzionalita/analisi-documenti.md), [redigerli](/funzionalita/redazione-documenti.md) o [revisionarli](/funzionalita/revisione-tracciata.md).
+- Oltre a trovare la norma, può supportare il **[ragionamento strategico](/funzionalita/ragionamento-strategico.md)**: incrociare norme, [orientamenti di legittimità](/glossario/orientamento-giurisprudenziale.md) e [calcolo di pene e termini](/funzionalita/calcolo-pena-termini.md) per presentare opzioni e conseguenze sul singolo caso.
 
 ## Vincoli
 

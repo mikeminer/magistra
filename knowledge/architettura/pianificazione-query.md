@@ -19,6 +19,7 @@ Una domanda in linguaggio naturale è spesso poco adatta come query di [ricerca 
 ## Cosa fa l'LLM nello step di pianificazione
 
 - **Interpreta l'intento**: materia, riferimenti espliciti (atto, articolo), ambito temporale e di [vigenza](/glossario/vigenza.md).
+- **Riconduce la [fattispecie](/glossario/fattispecie.md) concreta a quelle astratte**: dalla descrizione di un fatto (es. "truffa online con bonifico e restituzione parziale") deriva le norme e la [giurisprudenza](/fonti/giurisprudenza.md) pertinenti, anche quando l'utente non cita alcun articolo.
 - **Scompone** una domanda complessa in più sotto-domande.
 - **Riformula** in terminologia giuridica e con sinonimi, generando **più query** alternative.
 - Decide eventuali **filtri** (tipo di atto, data di vigenza, fonte).

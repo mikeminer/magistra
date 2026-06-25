@@ -8,4 +8,6 @@ timestamp: 2026-06-25T00:00:00Z
 
 # Provider LLM (configurabile)
 
-Almeno un provider a scelta; obiettivo di lungo periodo: supportare modelli eseguiti in locale per privacy e sovranità dei dati. Il provider genera le risposte nel [flusso RAG](/architettura/flusso-rag.md).
+Almeno un provider a scelta; il provider genera le risposte nel [flusso RAG](/architettura/flusso-rag.md).
+
+Poiché la [riservatezza è la leva primaria](/requisiti/privacy-e-dati-personali.md) per gli studi legali, il supporto a **modelli eseguiti in locale** è una priorità: solo così i documenti non lasciano mai la macchina. Quando l'utente sceglie un provider **remoto**, ciò che gli viene inviato esce dalla macchina: questa scelta dev'essere resa **trasparente** e può essere mitigata da un'[anonimizzazione reversibile](/architettura/anonimizzazione-reversibile.md), che sostituisce i dati sensibili con segnaposto prima dell'invio e li ripristina nella risposta.

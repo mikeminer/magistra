@@ -16,7 +16,9 @@ Questa cartella descrive **cosa fa** la piattaforma dal punto di vista dell'uten
 ## Assistente e conoscenza normativa
 
 - [Assistente legale (chat)](/funzionalita/assistente-legale.md) — dialogo in linguaggio naturale con risposte ancorate alle fonti.
-- [Ricerca normativa](/funzionalita/ricerca-normativa.md) — ricerca semantica e per parola chiave sul corpus.
+- [Ragionamento strategico](/funzionalita/ragionamento-strategico.md) — opzioni e scenari ragionati che incrociano norme, orientamenti di legittimità e calcoli. È il principale elemento di differenziazione.
+- [Calcolo di pene e termini](/funzionalita/calcolo-pena-termini.md) — computo esatto e regolato (continuazione, prescrizione, impugnazioni) a supporto del ragionamento strategico.
+- [Ricerca normativa](/funzionalita/ricerca-normativa.md) — ricerca semantica, per parola chiave e **per fattispecie** sul corpus.
 - [Confronto versioni](/funzionalita/confronto-versioni.md) — navigazione del testo vigente e delle versioni storiche.
 - [Riferimenti incrociati](/funzionalita/riferimenti-incrociati.md) — collegamenti automatici tra norme, codici e diritto UE.
 - [Verifica delle citazioni giurisprudenziali](/funzionalita/verifica-citazioni-giurisprudenza.md) — controllo che una sentenza citata esista e sia pertinente.
@@ -37,5 +39,6 @@ Questa cartella descrive **cosa fa** la piattaforma dal punto di vista dell'uten
 ## Principi
 
 - **Citazione prima di tutto**: ogni affermazione normativa rimanda a una [citazione verificabile](/glossario/citazione-verificabile.md).
+- **Dalla legge alla strategia**: oltre a trovare la norma, la piattaforma aiuta a [ragionare sulle scelte](/funzionalita/ragionamento-strategico.md) e sulle loro conseguenze, restando un supporto alla decisione del professionista.
 - **Controllo dell'utente sui dati**: i documenti caricati restano sulla sua macchina (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
 - **Trasparenza**: l'utente vede sempre le fonti su cui si basa una risposta.

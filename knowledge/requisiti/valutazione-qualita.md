@@ -16,11 +16,12 @@ L'affidabilità delle risposte è il cuore del prodotto e va **misurata**, non a
 - **Correttezza delle citazioni**: la [citazione verificabile](/glossario/citazione-verificabile.md) punta davvero al testo che sostiene l'affermazione, alla giusta data di [vigenza](/glossario/vigenza.md)?
 - **Tasso di [allucinazioni](/glossario/allucinazione.md)**: quante affermazioni non sono supportate da alcuna fonte.
 - **Qualità del retrieval**: i documenti pertinenti compaiono tra i risultati? (richiama il [reranking](/glossario/reranking.md)).
+- **Retrieval per [fattispecie](/glossario/fattispecie.md)**: data la descrizione di un fatto concreto, l'assistente recupera le norme e la [giurisprudenza](/fonti/giurisprudenza.md) pertinenti — non solo l'articolo già noto. È il test reale della [ricerca per fattispecie](/funzionalita/ricerca-normativa.md).
 - **Copertura e rifiuto corretto**: l'assistente dichiara di non sapere quando il corpus non contiene la risposta.
 
 ## Come
 
-- **Set di valutazione**: un insieme di quesiti con risposte e fonti attese, curato su materia italiana.
+- **Set di valutazione**: un insieme di quesiti con risposte e fonti attese, curato su materia italiana, **incluse descrizioni di fatti** ([fattispecie](/glossario/fattispecie.md) concrete) e non solo quesiti che citano già l'articolo.
 - Valutazione automatica (metriche di retrieval, controllo che le citazioni risolvano) e revisione umana a campione.
 - Tracciabilità: registrare quali chunk hanno prodotto ogni risposta (vedi [requisiti non funzionali](/requisiti/requisiti-non-funzionali.md)).
 
