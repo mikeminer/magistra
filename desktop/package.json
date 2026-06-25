@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "snapshot:create": "node create-corpus-snapshot.cjs",
-    "dist:win": "electron-builder --win nsis --x64"
+    "prepare:iurexa": "node prepare-iurexa-runtime.cjs",
+    "dist:win": "npm run prepare:iurexa && electron-builder --win nsis --x64"
   },
   "devDependencies": {
     "electron": "^31.7.7",
@@ -70,8 +71,11 @@
         "to": "magistra-runtime/schema.sql"
       },
       {
-        "from": "install-light-llm.ps1",
-        "to": "install-light-llm.ps1"
+        "from": "iurexa",
+        "to": "magistra-runtime/iurexa",
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "snapshots",
@@ -99,7 +103,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": false,
       "createStartMenuShortcut": true,
       "shortcutName": "Magistra"
     }

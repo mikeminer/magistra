@@ -7,6 +7,9 @@ desktop/snapshots/*.manifest.json
 desktop/postgres/**
 !desktop/postgres/
 !desktop/postgres/README.md
+desktop/iurexa/**
+!desktop/iurexa/
+!desktop/iurexa/README.md
 
 # Artefatti di build (PDF generato dalla knowledge base)
 dist/

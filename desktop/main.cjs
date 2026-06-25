@@ -13,6 +13,7 @@ const DESKTOP_DB_USER = "magistra";
 const DESKTOP_SNAPSHOT_NAME = "magistra-corpus.sql";
 let serverProcess;
 let workerProcess;
+let iurexaProcess;
 let mainWindow;
 let portablePostgres;
 
@@ -465,12 +466,124 @@ function detectDockerDatabaseUrl() {
   }
 }
 
-function resolveDesktopLlmBaseUrl(fileEnv) {
+function resolveDesktopLlmBaseUrl(fileEnv, iurexaRuntime) {
   const configured = process.env.LLM_BASE_URL || fileEnv.LLM_BASE_URL;
   if (!configured || /host\.docker\.internal/i.test(configured)) {
+    if (iurexaRuntime?.baseUrl) {
+      return iurexaRuntime.baseUrl;
+    }
     return "http://127.0.0.1:11434/v1";
   }
   return configured;
+}
+
+function resolvePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function resolveIurexaRuntime(root, fileEnv) {
+  const enabled = String(fileEnv.MAGISTRA_IUREXA_ENABLED || process.env.MAGISTRA_IUREXA_ENABLED || "true").toLowerCase();
+  if (enabled === "false" || enabled === "0" || enabled === "no") {
+    appendLog("iurexa.log", "runtime Iurexa disabilitato da configurazione");
+    return undefined;
+  }
+
+  const configuredDir = fileEnv.MAGISTRA_IUREXA_DIR || process.env.MAGISTRA_IUREXA_DIR;
+  const iurexaDir = firstExistingPath([
+    configuredDir ? path.resolve(configuredDir) : undefined,
+    path.join(root, "iurexa"),
+    path.join(root, "desktop", "iurexa")
+  ]);
+  if (!iurexaDir) {
+    const message = "Runtime Iurexa non trovato. Ricrea il bundle con: npm --prefix desktop run prepare:iurexa";
+    if (app.isPackaged) {
+      throw new Error(message);
+    }
+    appendLog("iurexa.log", `${message}; fallback LLM legacy`);
+    return undefined;
+  }
+
+  const runtimeExe = fileEnv.MAGISTRA_IUREXA_RUNTIME_EXE
+    || process.env.MAGISTRA_IUREXA_RUNTIME_EXE
+    || path.join(iurexaDir, "runtime", executableName("iurexa-runtime"));
+  const modelPath = fileEnv.MAGISTRA_IUREXA_MODEL_PATH
+    || process.env.MAGISTRA_IUREXA_MODEL_PATH
+    || path.join(iurexaDir, "models", "iurexa-lite.gguf");
+
+  if (!fs.existsSync(runtimeExe) || !fs.existsSync(modelPath)) {
+    const message = `Runtime Iurexa incompleto: exe=${runtimeExe}; model=${modelPath}`;
+    if (app.isPackaged) {
+      throw new Error(message);
+    }
+    appendLog("iurexa.log", `${message}; fallback LLM legacy`);
+    return undefined;
+  }
+
+  return {
+    baseUrl: `http://127.0.0.1:${resolvePositiveInteger(fileEnv.MAGISTRA_IUREXA_PORT || process.env.MAGISTRA_IUREXA_PORT, 4141)}/v1`,
+    batch: String(fileEnv.MAGISTRA_IUREXA_BATCH || process.env.MAGISTRA_IUREXA_BATCH || "128"),
+    context: String(fileEnv.MAGISTRA_IUREXA_CTX || process.env.MAGISTRA_IUREXA_CTX || "4096"),
+    logDirectory: fileEnv.MAGISTRA_IUREXA_LOG_DIR || process.env.MAGISTRA_IUREXA_LOG_DIR || logDir(),
+    modelId: fileEnv.MAGISTRA_IUREXA_MODEL_ID || process.env.MAGISTRA_IUREXA_MODEL_ID || "iurexa",
+    modelPath,
+    port: resolvePositiveInteger(fileEnv.MAGISTRA_IUREXA_PORT || process.env.MAGISTRA_IUREXA_PORT, 4141),
+    runtimeExe,
+    threads: String(fileEnv.MAGISTRA_IUREXA_THREADS || process.env.MAGISTRA_IUREXA_THREADS || "auto")
+  };
+}
+
+async function startIurexaRuntime(root, fileEnv) {
+  const runtime = resolveIurexaRuntime(root, fileEnv);
+  if (!runtime) {
+    return undefined;
+  }
+
+  const healthUrl = `http://127.0.0.1:${runtime.port}/health`;
+  try {
+    await waitForHttp(healthUrl, 1200);
+    appendLog("iurexa.log", `runtime Iurexa gia' disponibile: ${runtime.baseUrl}`);
+    return { baseUrl: runtime.baseUrl, model: runtime.modelId };
+  }
+  catch {
+    // Not running yet: start the bundled runtime below.
+  }
+
+  appendLog("iurexa.log", `starting runtime=${runtime.runtimeExe} model=${runtime.modelPath}`);
+  iurexaProcess = spawn(runtime.runtimeExe, [
+    "--model",
+    runtime.modelPath,
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(runtime.port),
+    "--ctx",
+    runtime.context,
+    "--threads",
+    runtime.threads,
+    "--batch",
+    runtime.batch,
+    "--cpu-only",
+    "--model-id",
+    runtime.modelId,
+    "--log-dir",
+    runtime.logDirectory
+  ], {
+    cwd: path.dirname(runtime.runtimeExe),
+    env: { ...process.env, ...fileEnv },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  iurexaProcess.stdout.on("data", (chunk) => appendLog("iurexa.out.log", chunk.toString()));
+  iurexaProcess.stderr.on("data", (chunk) => appendLog("iurexa.err.log", chunk.toString()));
+  iurexaProcess.once("exit", (code) => {
+    appendLog("iurexa.log", `runtime Iurexa exited code=${code ?? "unknown"}`);
+    iurexaProcess = undefined;
+  });
+
+  await waitForHttp(healthUrl, resolvePositiveInteger(fileEnv.MAGISTRA_IUREXA_STARTUP_TIMEOUT_MS || process.env.MAGISTRA_IUREXA_STARTUP_TIMEOUT_MS, 180000));
+  appendLog("iurexa.log", `runtime Iurexa pronto: ${runtime.baseUrl}`);
+  return { baseUrl: runtime.baseUrl, model: runtime.modelId };
 }
 
 function findFreePort() {
@@ -529,6 +642,9 @@ async function buildServerEnv(root, port) {
   const portableDatabase = !hasConfiguredDatabaseUrl && !pgliteDatabase
     ? await startPortablePostgres(root, fileEnv)
     : undefined;
+  const iurexaRuntime = await startIurexaRuntime(root, fileEnv);
+  const defaultLlmProvider = iurexaRuntime ? "openai-compatible" : "ollama";
+  const defaultLlmModel = iurexaRuntime?.model || "llama3.2:1b";
   const env = {
     ...process.env,
     ...fileEnv,
@@ -540,9 +656,11 @@ async function buildServerEnv(root, port) {
     ONLINE_SOURCE_RECOVERY_API_FALLBACK: "true",
     OBJECT_STORAGE_DIR: storageDir,
     MAGISTRA_RUNTIME_ROOT: root,
-    LLM_PROVIDER: fileEnv.LLM_PROVIDER || process.env.LLM_PROVIDER || "ollama",
-    LLM_BASE_URL: resolveDesktopLlmBaseUrl(fileEnv),
-    LLM_MODEL: fileEnv.LLM_MODEL || process.env.LLM_MODEL || "llama3.2:1b",
+    MAGISTRA_IUREXA_BASE_URL: iurexaRuntime?.baseUrl || "",
+    MAGISTRA_IUREXA_MODEL: iurexaRuntime?.model || "",
+    LLM_PROVIDER: fileEnv.LLM_PROVIDER || process.env.LLM_PROVIDER || defaultLlmProvider,
+    LLM_BASE_URL: resolveDesktopLlmBaseUrl(fileEnv, iurexaRuntime),
+    LLM_MODEL: fileEnv.LLM_MODEL || process.env.LLM_MODEL || defaultLlmModel,
     LLM_API_FORMAT: fileEnv.LLM_API_FORMAT || process.env.LLM_API_FORMAT || "chat",
     LLM_TEMPERATURE: fileEnv.LLM_TEMPERATURE || process.env.LLM_TEMPERATURE || "0.1",
     LLM_MAX_OUTPUT_TOKENS: fileEnv.LLM_MAX_OUTPUT_TOKENS || process.env.LLM_MAX_OUTPUT_TOKENS || "700",
@@ -718,6 +836,9 @@ app.on("before-quit", () => {
   }
   if (serverProcess && !serverProcess.killed) {
     serverProcess.kill();
+  }
+  if (iurexaProcess && !iurexaProcess.killed) {
+    iurexaProcess.kill();
   }
   stopPortablePostgres();
 });
