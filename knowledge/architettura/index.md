@@ -48,6 +48,7 @@ flowchart TD
 - [Database applicativo](/architettura/database-applicativo.md)
 - [Object storage (S3-compatibile)](/architettura/object-storage.md)
 - [Provider LLM (configurabile)](/architettura/provider-llm.md)
+- [Provider Iurexa](/architettura/provider-iurexa.md)
 - [Gestione delle API key](/architettura/gestione-api-key.md)
 - [Conversione documenti](/architettura/conversione-documenti.md)
 - [Pianificazione delle query](/architettura/pianificazione-query.md)

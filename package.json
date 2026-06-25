@@ -9,15 +9,17 @@
     "desktop"
   ],
   "scripts": {
-    "check": "npm run check:runtime && npm run test:penal && npm run kb:validate",
-    "check:runtime": "node --check desktop/main.cjs && node --check desktop/create-corpus-snapshot.cjs && node --check packages/backend/dist/index.js && node --check packages/worker/dist/index.js && node --check packages/worker/dist/cli.js",
+    "check": "npm run check:runtime && npm run test:penal && npm run test:llm && npm run kb:validate",
+    "check:runtime": "node --check desktop/main.cjs && node --check desktop/create-corpus-snapshot.cjs && node --check packages/llm/dist/index.js && node --check packages/backend/dist/index.js && node --check packages/worker/dist/index.js && node --check packages/worker/dist/cli.js",
     "kb:validate": "node scripts/validate-knowledge-base.mjs",
+    "test:llm": "node scripts/test-llm-provider.mjs",
     "test:penal": "node scripts/test-penal-strategy.mjs",
     "desktop:dist": "npm --prefix desktop run dist:win",
     "snapshot:create": "npm --prefix desktop run snapshot:create"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
+    "fast-xml-parser": "^5.9.2",
     "pdfjs-dist": "^4.8.69"
   }
 }

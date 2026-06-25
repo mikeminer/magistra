@@ -20,6 +20,7 @@ La scelta di riferimento è descritta in [Scelta stack e runtime](/architettura/
 - Pianificare query e orchestrare retrieval, reranking e costruzione del contesto.
 - Interrogare [PostgreSQL + pgvector](/architettura/indice-normativo.md) come fonte locale primaria.
 - Chiamare il [provider LLM](/architettura/provider-llm.md) solo dopo aver costruito un contesto citabile.
+- Esporre `/ask` come endpoint stabile per la chat RAG, includendo il supporto a [Iurexa](/architettura/provider-iurexa.md) quando configurato come provider locale.
 - Esporre stato, errori e risultati dei job gestiti dal worker.
 
 ## Recupero fonti mancanti

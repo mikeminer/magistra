@@ -66,6 +66,12 @@ export declare class OpenAICompatibleGeneratoreRisposta implements GeneratoreRis
     private generaConResponses;
     private generaConChatCompletions;
 }
+export interface IurexaGeneratoreOptions extends Omit<OpenAICompatibleGeneratoreOptions, "apiFormat"> {
+}
+export declare class IurexaGeneratoreRisposta extends OpenAICompatibleGeneratoreRisposta {
+    readonly nome: string;
+    constructor(options?: IurexaGeneratoreOptions);
+}
 export declare function creaEmbeddingProviderDaEnv(env?: NodeJS.ProcessEnv): EmbeddingProvider;
 export declare function creaGeneratoreRispostaDaEnv(env?: NodeJS.ProcessEnv): GeneratoreRisposta;
 export declare function similaritaCoseno(left: readonly number[], right: readonly number[]): number;

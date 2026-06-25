@@ -51,7 +51,7 @@ Il progetto si fonda su fonti ufficiali e aperte:
 - **Storage**: object storage compatibile S3 (MinIO, self-hosted) per i documenti
 - **Pipeline dati**: ingest da Normattiva (Akoma Ntoso → parsing → chunking → embedding)
 - **RAG**: retrieval con citazioni → generazione con LLM
-- **Modelli**: configurabili, almeno un provider a scelta (con possibilità di modelli locali/self-hosted)
+- **Modelli**: configurabili, con supporto a provider remoti, OpenAI-compatible e al provider locale **Iurexa** per inferenza self-hosted/CPU-only
 
 ```
 Utente → Frontend (Next.js)
@@ -62,6 +62,22 @@ Utente → Frontend (Next.js)
             ▼
           LLM (RAG con citazioni)
 ```
+
+---
+
+## Provider locale Iurexa
+
+Magistra può usare Iurexa come motore LLM locale senza sostituire il proprio RAG: il backend recupera chunk e fonti, costruisce il prompt grounded e chiama Iurexa solo per generare la risposta citazionale.
+
+Configurazione minima:
+
+```bash
+MAGISTRA_LLM_PROVIDER=iurexa
+MAGISTRA_IUREXA_BASE_URL=http://127.0.0.1:4141/v1
+MAGISTRA_IUREXA_MODEL=iurexa
+```
+
+L'endpoint API resta `/ask`; la risposta continua a includere fonti, citazioni e metriche. Dettagli in [`knowledge/architettura/provider-iurexa.md`](knowledge/architettura/provider-iurexa.md).
 
 ---
 

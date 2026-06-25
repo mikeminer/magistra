@@ -16,7 +16,7 @@ L'assistente non embedda la domanda così com'è: prima **ragiona** sulla richie
 4. I risultati delle varie query vengono **uniti, deduplicati e [rerankati](/glossario/reranking.md)**.
 5. Il [backend](/architettura/backend-api.md) costruisce un contesto con i testi normativi, gli eventuali orientamenti giurisprudenziali e i relativi metadati di citazione.
 6. Se il contesto è insufficiente, l'assistente può **iterare**: generare nuove query e tornare al passo 3.
-7. L'LLM genera la risposta **citando** articolo, comma e fonte ([ELI](/glossario/eli.md)); nelle risposte strategiche separa opzioni, presupposti, effetti, rischi e dati mancanti.
+7. L'LLM genera la risposta **citando** articolo, comma e fonte ([ELI](/glossario/eli.md)); nelle risposte strategiche separa opzioni, presupposti, effetti, rischi e dati mancanti. Se è configurato [Iurexa](/architettura/provider-iurexa.md), questa generazione avviene tramite il runtime locale mantenendo invariati retrieval e citazioni.
 8. Il [frontend](/architettura/frontend.md) mostra la risposta con i link verificabili alle fonti.
 
 ```mermaid

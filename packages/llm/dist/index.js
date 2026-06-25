@@ -154,6 +154,18 @@ export class OpenAICompatibleGeneratoreRisposta {
         return garantisciCitazioniRecuperate(text, richiesta);
     }
 }
+export class IurexaGeneratoreRisposta extends OpenAICompatibleGeneratoreRisposta {
+    constructor(options = {}) {
+        const model = nonEmpty(options.model) ?? "iurexa";
+        super({
+            ...options,
+            apiFormat: "chat",
+            baseUrl: nonEmpty(options.baseUrl) ?? "http://127.0.0.1:4141/v1",
+            model
+        });
+        this.nome = `iurexa-local:${model}`;
+    }
+}
 export function creaEmbeddingProviderDaEnv(env = process.env) {
     const provider = env.EMBEDDING_PROVIDER ?? "stub";
     if (provider === "stub") {
@@ -170,11 +182,31 @@ export function creaEmbeddingProviderDaEnv(env = process.env) {
     throw new Error(`Provider embedding non supportato: ${provider}`);
 }
 export function creaGeneratoreRispostaDaEnv(env = process.env) {
-    const provider = env.LLM_PROVIDER ?? "stub";
-    const maxOutputTokens = numberFromEnv(env.LLM_MAX_OUTPUT_TOKENS, 700);
-    const temperature = optionalNumberFromEnv(env.LLM_TEMPERATURE);
+    const provider = normalizzaProvider(env.MAGISTRA_LLM_PROVIDER ?? env.LLM_PROVIDER, "stub");
+    const maxOutputTokens = numberFromEnv(env.MAGISTRA_LLM_MAX_OUTPUT_TOKENS ?? env.LLM_MAX_OUTPUT_TOKENS, 700);
+    const temperature = optionalNumberFromEnv(env.MAGISTRA_LLM_TEMPERATURE ?? env.LLM_TEMPERATURE);
     if (provider === "stub") {
         return new GeneratoreRispostaStub();
+    }
+    if (provider === "iurexa") {
+        return new IurexaGeneratoreRisposta({
+            apiKey: nonEmpty(env.MAGISTRA_IUREXA_API_KEY) ??
+                nonEmpty(env.IUREXA_API_KEY) ??
+                nonEmpty(env.MAGISTRA_LLM_API_KEY) ??
+                nonEmpty(env.LLM_API_KEY),
+            baseUrl: nonEmpty(env.MAGISTRA_IUREXA_BASE_URL) ??
+                nonEmpty(env.IUREXA_BASE_URL) ??
+                nonEmpty(env.MAGISTRA_LLM_BASE_URL) ??
+                nonEmpty(env.LLM_BASE_URL) ??
+                "http://127.0.0.1:4141/v1",
+            maxOutputTokens: numberFromEnv(env.MAGISTRA_IUREXA_MAX_OUTPUT_TOKENS ?? env.IUREXA_MAX_OUTPUT_TOKENS, maxOutputTokens),
+            model: nonEmpty(env.MAGISTRA_IUREXA_MODEL) ??
+                nonEmpty(env.IUREXA_MODEL) ??
+                nonEmpty(env.MAGISTRA_LLM_MODEL) ??
+                nonEmpty(env.LLM_MODEL) ??
+                "iurexa",
+            temperature: optionalNumberFromEnv(env.MAGISTRA_IUREXA_TEMPERATURE ?? env.IUREXA_TEMPERATURE) ?? temperature
+        });
     }
     if (provider === "openai") {
         return new OpenAICompatibleGeneratoreRisposta({
@@ -182,17 +214,25 @@ export function creaGeneratoreRispostaDaEnv(env = process.env) {
             apiKey: requireEnv(env, "OPENAI_API_KEY"),
             baseUrl: nonEmpty(env.OPENAI_BASE_URL),
             maxOutputTokens,
-            model: nonEmpty(env.OPENAI_RESPONSE_MODEL) ?? nonEmpty(env.LLM_MODEL) ?? "gpt-5.5",
+            model: nonEmpty(env.OPENAI_RESPONSE_MODEL) ??
+                nonEmpty(env.MAGISTRA_LLM_MODEL) ??
+                nonEmpty(env.LLM_MODEL) ??
+                "gpt-5.5",
             temperature
         });
     }
     if (provider === "openai-compatible") {
         return new OpenAICompatibleGeneratoreRisposta({
             apiFormat: parseApiFormat(env.LLM_API_FORMAT, "chat"),
-            apiKey: nonEmpty(env.LLM_API_KEY) ?? nonEmpty(env.OPENAI_API_KEY),
-            baseUrl: nonEmpty(env.LLM_BASE_URL) ?? nonEmpty(env.OPENAI_BASE_URL),
+            apiKey: nonEmpty(env.MAGISTRA_LLM_API_KEY) ??
+                nonEmpty(env.LLM_API_KEY) ??
+                nonEmpty(env.OPENAI_API_KEY),
+            baseUrl: nonEmpty(env.MAGISTRA_LLM_BASE_URL) ??
+                nonEmpty(env.LLM_BASE_URL) ??
+                nonEmpty(env.OPENAI_BASE_URL),
             maxOutputTokens,
-            model: nonEmpty(env.LLM_MODEL) ??
+            model: nonEmpty(env.MAGISTRA_LLM_MODEL) ??
+                nonEmpty(env.LLM_MODEL) ??
                 nonEmpty(env.OPENAI_RESPONSE_MODEL) ??
                 "hermes-3-llama-3.1-8b",
             temperature
@@ -202,14 +242,17 @@ export function creaGeneratoreRispostaDaEnv(env = process.env) {
         return new OpenAICompatibleGeneratoreRisposta({
             apiFormat: parseApiFormat(env.LLM_API_FORMAT, "chat"),
             apiKey: nonEmpty(env.OLLAMA_API_KEY) ??
+                nonEmpty(env.MAGISTRA_LLM_API_KEY) ??
                 nonEmpty(env.LLM_API_KEY) ??
                 nonEmpty(env.OPENAI_API_KEY),
             baseUrl: nonEmpty(env.OLLAMA_BASE_URL) ??
+                nonEmpty(env.MAGISTRA_LLM_BASE_URL) ??
                 nonEmpty(env.LLM_BASE_URL) ??
                 nonEmpty(env.OPENAI_BASE_URL) ??
                 "http://localhost:11434/v1",
             maxOutputTokens,
             model: nonEmpty(env.OLLAMA_MODEL) ??
+                nonEmpty(env.MAGISTRA_LLM_MODEL) ??
                 nonEmpty(env.LLM_MODEL) ??
                 nonEmpty(env.OPENAI_RESPONSE_MODEL) ??
                 "hermes3",
@@ -711,6 +754,9 @@ function optionalNumberFromEnv(value) {
     }
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
+}
+function normalizzaProvider(value, fallback) {
+    return (nonEmpty(value) ?? fallback).toLowerCase();
 }
 function nonEmpty(value) {
     const trimmed = value?.trim();
