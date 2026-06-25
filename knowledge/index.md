@@ -1,11 +1,11 @@
 ---
 type: Bundle di Conoscenza
 title: Knowledge base Magistra
-version: 0.1.0
+version: 0.2.0
 description: Bundle OKF (Open Knowledge Format v0.1) che raccoglie fonti dati, modello dati, architettura e glossario del progetto.
 resource: https://github.com/Italian-Builders-Org/Italian-OSS-Legal-Platform
 tags: [okf, knowledge-base, diritto-italiano]
-timestamp: 2026-06-18T00:00:00Z
+timestamp: 2026-06-25T00:00:00Z
 ---
 
 # Knowledge base — Magistra

@@ -19,7 +19,7 @@ L'utente carica un proprio [documento](/modello-dati/documento.md) (contratto, a
 
 ## Trattamento del file
 
-- Il file caricato passa per la [conversione documenti](/architettura/conversione-documenti.md) (estrazione del testo, eventuale DOC/DOCX → PDF) ed è conservato nell'[object storage](/architettura/object-storage.md).
-- Resta nell'ambito dell'utente / dell'istanza self-hosted (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
+- Il file caricato passa per la [conversione documenti](/architettura/conversione-documenti.md) (estrazione del testo, eventuale DOC/DOCX → PDF) ed è conservato nell'[archiviazione locale](/architettura/archiviazione-documenti.md).
+- Resta sulla macchina dell'utente (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
 
 Si appoggia all'[assistente legale](/funzionalita/assistente-legale.md) e può essere svolta su più file insieme con le [operazioni multi-documento](/funzionalita/operazioni-multi-documento.md).

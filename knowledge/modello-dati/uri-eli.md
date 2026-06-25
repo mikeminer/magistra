@@ -4,17 +4,17 @@ title: Identificazione — URI ELI
 description: L'URI ELI come chiave primaria stabile per collegare versioni, citazioni e riferimenti incrociati.
 resource: https://eur-lex.europa.eu/eli-register/about.html
 tags: [eli, identificazione, chiave-primaria]
-timestamp: 2026-06-18T00:00:00Z
+timestamp: 2026-06-25T00:00:00Z
 ---
 
 # Identificazione: URI ELI
 
 Ogni norma è identificata da una **URI [ELI](/glossario/eli.md)** (European Legislation Identifier) permanente. Magistra usa l'ELI come **chiave primaria stabile** per collegare versioni, citazioni e riferimenti incrociati.
 
-Esempio concettuale di pattern ELI:
+Esempio di pattern ELI nell'implementazione italiana (Normattiva), che usa `stato` come giurisdizione, senza codice paese:
 
 ```
-/eli/it/stato/legge/1990/08/07/241/...
+/eli/stato/legge/1990/08/07/241/...
 ```
 
 Vantaggi: stabilità nel tempo, interoperabilità europea, deduplicazione affidabile.

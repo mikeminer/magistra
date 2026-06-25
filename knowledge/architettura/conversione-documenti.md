@@ -19,6 +19,6 @@ Prepara i [documenti](/modello-dati/documento.md) caricati per l'uso da parte de
 ## Relazioni
 
 - Alimenta l'[analisi di documenti](/funzionalita/analisi-documenti.md), la [revisione tabellare](/funzionalita/revisione-tabellare.md) e la [redazione](/funzionalita/redazione-documenti.md).
-- I file di origine e i derivati risiedono nell'[object storage](/architettura/object-storage.md).
+- I file di origine e i derivati risiedono nell'[archiviazione locale](/architettura/archiviazione-documenti.md).
 
 > Nota: la conversione del **corpus normativo** è cosa diversa — quella avviene nella [pipeline di trasformazione](/modello-dati/pipeline-trasformazione.md) a partire da [Akoma Ntoso](/glossario/akoma-ntoso.md). Qui si tratta dei documenti **dell'utente**.

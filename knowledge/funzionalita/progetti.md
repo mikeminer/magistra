@@ -18,6 +18,6 @@ Un **progetto** è uno spazio di lavoro che raggruppa [documenti](/modello-dati/
 ## Aspetti tecnici
 
 - Modellato dall'entità [Progetto](/modello-dati/progetto.md).
-- I documenti restano nell'[object storage](/architettura/object-storage.md) sotto il controllo dell'utente/istanza (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
+- I documenti restano nell'[archiviazione locale](/architettura/archiviazione-documenti.md) sotto il controllo dell'utente (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
 
-> Versione single-utente: nessuna condivisione tra account né collaborazione. La condivisione di progetti è prevista solo per la versione cloud gestita.
+> Single-utente: nessuna condivisione tra account né collaborazione; i progetti non sono condivisi.

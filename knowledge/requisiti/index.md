@@ -27,5 +27,5 @@ Insieme alle [funzionalità](/funzionalita/index.md) è la base del documento di
 ## Principi
 
 - **Citazioni verificabili** come requisito di prodotto, non solo come funzionalità.
-- **Privacy by design** e possibilità di [self-hosting](/glossario/self-hosting.md).
+- **Riservatezza come leva primaria**: per gli studi legali la confidenzialità dei dati dei clienti conta più del costo; l'app gira interamente in locale e i dati restano sulla macchina dell'utente (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
 - **Misurabilità**: la qualità delle risposte si valuta con metriche, non a sensazione.

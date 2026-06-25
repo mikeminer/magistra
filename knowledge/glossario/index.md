@@ -22,6 +22,8 @@ Termini giuridici e tecnici ricorrenti nel progetto Magistra. Ogni termine è un
 - [Rubrica](/glossario/rubrica.md)
 - [Recepimento](/glossario/recepimento.md)
 - [Giurisprudenza](/glossario/giurisprudenza.md)
+- [Orientamento giurisprudenziale (diritto vivente)](/glossario/orientamento-giurisprudenziale.md)
+- [Fattispecie](/glossario/fattispecie.md)
 - [GDPR](/glossario/gdpr.md)
 
 ## Standard e formati
@@ -42,7 +44,6 @@ Termini giuridici e tecnici ricorrenti nel progetto Magistra. Ogni termine è un
 - [Vector DB](/glossario/vector-db.md)
 - [Reranking](/glossario/reranking.md)
 - [Prompt](/glossario/prompt.md)
-- [Self-hosting](/glossario/self-hosting.md)
 - [Citazione verificabile](/glossario/citazione-verificabile.md)
 - [Groundedness (aderenza alle fonti)](/glossario/groundedness.md)
 - [Allucinazione](/glossario/allucinazione.md)

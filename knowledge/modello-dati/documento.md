@@ -16,7 +16,7 @@ Un file **dell'utente** (contratto, atto, parere) caricato o generato dentro un 
 | `progetto` | [Progetto](/modello-dati/progetto.md) di appartenenza |
 | `nome` | nome del file |
 | `formato` | PDF, DOCX, … |
-| `uri_storage` | posizione nell'[object storage](/architettura/object-storage.md) |
+| `uri_storage` | posizione nell'[archiviazione locale](/architettura/archiviazione-documenti.md) |
 | `versioni` | cronologia delle [modifiche tracciate](/glossario/modifiche-tracciate.md) |
 | `caricato_il` | data di acquisizione |
 
