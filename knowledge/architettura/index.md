@@ -2,7 +2,7 @@
 type: Indice
 title: Architettura
 description: Componenti del sistema e flusso RAG. Bozza per orientare le scelte; non è ancora un'implementazione.
-tags: [architettura, rag, self-hosting]
+tags: [architettura, rag, locale]
 timestamp: 2026-06-18T00:00:00Z
 ---
 
@@ -17,10 +17,9 @@ flowchart TD
     Utente(["Utente"])
     FE["Frontend (Next.js)"]
     BE["Backend / API (Node)<br/>orchestrazione RAG"]
-    VDB[("Vector DB<br/>PostgreSQL + pgvector")]
-    OS[("Object storage<br/>MinIO, S3-compat.<br/>documenti utente")]
+    VDB[("Database + indice<br/>PGlite + pgvector<br/>(embedded)")]
+    OS[("Documenti utente<br/>filesystem locale")]
     IDX["Indice normativo<br/>chunk + metadati ELI"]
-    Pipe[/"Pipeline di ingest"/]
     LLM["LLM<br/>provider configurabile"]
 
     Utente --> FE
@@ -28,29 +27,37 @@ flowchart TD
     BE --> VDB
     BE --> OS
     VDB --> IDX
-    Pipe -. alimenta .-> IDX
     BE --> LLM
     LLM -->|risposte con citazioni| FE
 ```
 
+Magistra è un'**app desktop** che gira interamente in locale: tutti i componenti sono impacchettati nel bundle dell'app, con database e indice **embedded** (PGlite) e i documenti dell'utente sul **filesystem locale**. Vedi [deployment](/architettura/deployment.md).
+
+L'ingest pesante del corpus non gira insieme all'assistente: è un job **batch separato** (vedi [worker / runtime dei job](/architettura/worker-ingest.md)), così la chat resta reattiva.
+
 ## Concetti
 
+- [Stack tecnologico (TypeScript-first)](/architettura/stack-tecnologico.md)
 - [Frontend (Next.js)](/architettura/frontend.md)
 - [Backend / API (Node)](/architettura/backend-api.md)
+- [Worker / runtime dei job](/architettura/worker-ingest.md)
 - [Indice normativo + Vector DB](/architettura/indice-normativo.md)
 - [Database applicativo](/architettura/database-applicativo.md)
-- [Object storage (S3-compatibile)](/architettura/object-storage.md)
+- [Object storage (documenti utente)](/architettura/object-storage.md)
 - [Provider LLM (configurabile)](/architettura/provider-llm.md)
 - [Gestione delle API key](/architettura/gestione-api-key.md)
 - [Conversione documenti](/architettura/conversione-documenti.md)
 - [Pianificazione delle query](/architettura/pianificazione-query.md)
 - [Flusso di una domanda (RAG agentico)](/architettura/flusso-rag.md)
-- [Deployment e self-hosting](/architettura/deployment.md)
+- [Deployment](/architettura/deployment.md)
 
 ## Principi architetturali
 
+- **App desktop locale**: Magistra è un'app installabile che gira interamente sulla macchina dell'utente, con i dati in locale.
+- **Stack TypeScript-first**: un solo linguaggio end-to-end per abbassare la barriera d'ingresso della community OSS; scelta non ideologica e reversibile, con escape hatch verso altri runtime quando un requisito concreto lo giustifica (vedi [stack tecnologico](/architettura/stack-tecnologico.md)).
+- **Separazione API / batch**: l'API in tempo reale e i job batch (ingest, embedding, reindex) girano in [processi separati](/architettura/worker-ingest.md), così l'assistente resta reattivo durante gli aggiornamenti del corpus.
 - **Citazione prima di tutto**: nessuna risposta normativa senza fonte recuperata dall'indice.
-- **Single-utente**: questa versione OSS è pensata per una sola persona su un proprio computer/server; non gestisce account, login né multi-utenza (quelli sono previsti solo per la futura versione cloud gestita).
+- **Single-utente**: pensata per una sola persona sul proprio computer; non gestisce account, login né multi-utenza.
 - **Separazione dati/modello**: la qualità dipende dai dati e dal retrieval, non solo dall'LLM.
-- **Self-hosting possibile**: l'architettura deve poter girare interamente sotto il controllo dell'utente.
-- **Modularità**: provider LLM, storage e database intercambiabili.
+- **Dati sotto il controllo dell'utente**: tutto gira e resta in locale sulla macchina dell'utente.
+- **Modularità**: provider LLM intercambiabile.

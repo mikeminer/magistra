@@ -37,5 +37,5 @@ Questa cartella descrive **cosa fa** la piattaforma dal punto di vista dell'uten
 ## Principi
 
 - **Citazione prima di tutto**: ogni affermazione normativa rimanda a una [citazione verificabile](/glossario/citazione-verificabile.md).
-- **Controllo dell'utente sui dati**: i documenti caricati restano nel suo ambiente (vedi [self-hosting](/glossario/self-hosting.md) e [privacy](/requisiti/privacy-e-dati-personali.md)).
+- **Controllo dell'utente sui dati**: i documenti caricati restano sulla sua macchina (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
 - **Trasparenza**: l'utente vede sempre le fonti su cui si basa una risposta.

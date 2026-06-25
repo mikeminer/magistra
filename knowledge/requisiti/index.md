@@ -27,5 +27,5 @@ Insieme alle [funzionalità](/funzionalita/index.md) è la base del documento di
 ## Principi
 
 - **Citazioni verificabili** come requisito di prodotto, non solo come funzionalità.
-- **Privacy by design** e possibilità di [self-hosting](/glossario/self-hosting.md).
+- **Privacy by design**: l'app gira interamente in locale, i dati restano sulla macchina dell'utente.
 - **Misurabilità**: la qualità delle risposte si valuta con metriche, non a sensazione.

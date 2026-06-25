@@ -15,7 +15,7 @@ Permette di configurare le chiavi dell'istanza per i [provider LLM](/architettur
 - Inserimento e aggiornamento delle [chiavi API](/modello-dati/chiave-api.md) per provider (Anthropic, Google, OpenAI o endpoint locali).
 - **Conservazione [cifrata](/glossario/cifratura.md)** a riposo: mai in chiaro nel database né nei log (requisito di [sicurezza](/requisiti/sicurezza.md)).
 - Selezione del modello attivo (model picker).
-- Le chiavi appartengono all'istanza [self-hostata](/glossario/self-hosting.md) single-utente.
+- Le chiavi appartengono all'istanza locale single-utente.
 
 ## Relazioni
 

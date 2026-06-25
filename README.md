@@ -18,7 +18,7 @@ I principi guida sono tre:
 
 - **Citazioni sempre verificabili**: ogni risposta rimanda all'articolo, al comma e alla fonte ufficiale (URI ELI / Normattiva).
 - **Trasparenza**: codice, prompt e pipeline di dati sono aperti e ispezionabili.
-- **Privacy by design**: i documenti dell'utente restano sotto il suo controllo; possibilità di esecuzione self-hosted.
+- **Privacy by design**: app desktop locale, i documenti dell'utente restano sulla sua macchina e sotto il suo controllo.
 
 ---
 
@@ -45,22 +45,26 @@ Il progetto si fonda su fonti ufficiali e aperte:
 
 ## Architettura (proposta)
 
+Stack **TypeScript-first** end-to-end. Magistra è un'**app desktop** che gira interamente in locale, con tutti i dati sulla macchina dell'utente.
+
 - **Frontend**: Next.js (TypeScript)
-- **Backend**: API Node/Express (TypeScript)
-- **Database**: PostgreSQL + estensione vettoriale (es. `pgvector`) per la ricerca semantica
-- **Storage**: object storage compatibile S3 (MinIO, self-hosted) per i documenti
-- **Pipeline dati**: ingest da Normattiva (Akoma Ntoso → parsing → chunking → embedding)
+- **Backend / API**: Node (TypeScript); l'ingest pesante gira come **job batch** separato dall'assistente
+- **Database**: **PGlite** embedded (Postgres in WASM) con `pgvector` per la ricerca semantica
+- **Storage**: filesystem locale per i documenti dell'utente
+- **Distribuzione**: app desktop installabile (es. Electron), senza Docker
+- **Pipeline dati**: ingest da Normattiva (Akoma Ntoso → parsing → chunking → embedding); indice distribuito già pronto nel bundle
 - **RAG**: retrieval con citazioni → generazione con LLM
-- **Modelli**: configurabili, almeno un provider a scelta (con possibilità di modelli locali/self-hosted)
+- **Modelli**: configurabili, almeno un provider a scelta (con possibilità di modelli eseguiti in locale)
 
 ```
 Utente → Frontend (Next.js)
             │
             ▼
         Backend / API ──► Vector DB (pgvector) ──► Fonti normative (Akoma Ntoso / ELI)
-            │
-            ▼
-          LLM (RAG con citazioni)
+            │                  ▲
+            ▼                  │ alimenta (processo separato)
+          LLM (RAG con      Worker / ingest
+          citazioni)
 ```
 
 ---

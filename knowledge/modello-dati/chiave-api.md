@@ -20,6 +20,6 @@ La credenziale con cui la piattaforma interroga un [provider LLM](/architettura/
 ## Note di sicurezza
 
 - Il valore non compare mai in chiaro nel database né nei log (requisito di [sicurezza](/requisiti/sicurezza.md)).
-- Le chiavi appartengono all'istanza [self-hostata](/glossario/self-hosting.md) single-utente.
+- Le chiavi appartengono all'istanza locale single-utente.
 
 Parte del [modello dati applicativo](/modello-dati/modello-applicativo.md).

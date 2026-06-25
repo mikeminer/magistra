@@ -1,27 +1,31 @@
 ---
 type: Processo
-title: Deployment e self-hosting
-description: Come la piattaforma viene installata ed eseguita, con configurazione via ambiente e possibilità di esecuzione interamente self-hosted.
-tags: [deployment, self-hosting, configurazione]
-timestamp: 2026-06-20T00:00:00Z
+title: Deployment
+description: Magistra è distribuita come app desktop installabile che gira interamente in locale, senza Docker né competenze sistemistiche.
+tags: [deployment, desktop, locale]
+timestamp: 2026-06-25T00:00:00Z
 ---
 
-# Deployment e self-hosting
+# Deployment
 
-Descrive come si mette in esecuzione la piattaforma. Obiettivo: poter girare **interamente sotto il controllo dell'utente** ([self-hosting](/glossario/self-hosting.md)), così che i documenti non lascino il suo ambiente. È una versione **single-utente**, pensata per essere installata su un proprio computer o server: niente account né login. L'applicazione si ottiene clonando il repository e si avvia su server propri o sulle proprie macchine.
+Magistra è distribuita come **app desktop installabile**, non come stack di servizi. Il target è l'avvocato, che non deve installare Docker né gestire infrastruttura: scarica l'app e la usa.
 
-## Componenti da mettere in esecuzione
+> Bozza concettuale: la scelta puntuale degli strumenti (framework desktop, packaging, script di setup) è demandata al documento di design.
 
-- [Frontend](/architettura/frontend.md) e [backend](/architettura/backend-api.md).
-- [Database applicativo](/architettura/database-applicativo.md) e [indice normativo](/architettura/indice-normativo.md) (PostgreSQL + pgvector).
-- [Object storage](/architettura/object-storage.md) compatibile S3.
+## App desktop
 
-## Configurazione (via ambiente)
+- È un **bundle che contiene tutto**: UI, logica di business e dati. Non un semplice client.
+- Il [database](/architettura/database-applicativo.md) e l'[indice normativo](/architettura/indice-normativo.md) sono un'istanza **embedded** (PGlite, Postgres in WASM con `pgvector`); i documenti dell'utente vanno sul **filesystem locale** (vedi [object storage](/architettura/object-storage.md)).
+- I dati restano sulla macchina dell'utente, senza il costo tecnico di gestire server o servizi.
+- Strumento candidato per il packaging: **Electron**, coerente con lo [stack TypeScript-first](/architettura/stack-tecnologico.md) (l'intero bundle resta in TS).
 
-- Credenziali di database e storage.
+## Indice già pronto
+
+L'[ingest del corpus](/modello-dati/pipeline-trasformazione.md) non viene eseguito sul dispositivo di ogni utente: è il team a svolgerlo in un **ambiente controllato** e a distribuire un **indice già "ingestato"**. L'indice pre-costruito è incluso nel bundle (o scaricato al primo avvio) e può essere **aggiornato**; l'utente "pro" resta libero di rieseguire l'ingest da sé, perché la relativa logica vive nel repository.
+
+## Configurazione
+
 - Chiavi di [cifratura](/glossario/cifratura.md) dei segreti (vedi [sicurezza](/requisiti/sicurezza.md)).
 - [API key](/architettura/gestione-api-key.md) dei [provider LLM](/architettura/provider-llm.md).
 
-I segreti sono forniti via ambiente e **non versionati**. Lo schema del database evolve con migrazioni versionate.
-
-> Bozza concettuale: la scelta degli strumenti (container, orchestrazione, script di setup) è demandata al documento di design.
+I segreti non sono versionati. Lo schema del database evolve con migrazioni versionate.

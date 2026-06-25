@@ -12,7 +12,7 @@ I documenti caricati dall'utente (contratti, atti, pareri) contengono spesso dat
 
 ## Principi
 
-- **Privacy by design**: i [documenti](/modello-dati/documento.md) dell'utente restano sotto il suo controllo; l'architettura permette il [self-hosting](/glossario/self-hosting.md) completo, così i dati non lasciano l'ambiente dell'organizzazione.
+- **Privacy by design**: i [documenti](/modello-dati/documento.md) dell'utente restano sotto il suo controllo; l'app gira interamente in locale, così i dati non lasciano la sua macchina.
 - **Minimizzazione**: si conservano solo i dati necessari al servizio.
 - **Conformità [GDPR](/glossario/gdpr.md)**: base giuridica del trattamento, diritti dell'interessato (accesso, cancellazione), conservazione limitata.
 - **Separazione**: i dati applicativi dell'utente (vedi [modello applicativo](/modello-dati/modello-applicativo.md)) sono distinti dal corpus normativo pubblico.

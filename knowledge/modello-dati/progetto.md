@@ -20,6 +20,6 @@ Raggruppa il lavoro attorno a una pratica o a un cliente. È il dato dietro la f
 
 - Contiene [Documenti](/modello-dati/documento.md) e [Conversazioni](/modello-dati/conversazione.md).
 
-> Versione single-utente: il progetto non ha proprietario né membri e non è condiviso. La multi-utenza è prevista solo per la futura versione cloud gestita.
+> Single-utente: il progetto non ha proprietario né membri e non è condiviso; non esiste multi-utenza.
 
 Parte del [modello dati applicativo](/modello-dati/modello-applicativo.md).
