@@ -4,7 +4,7 @@ title: Gazzetta Ufficiale
 description: Fonte ufficiale di pubblicazione degli atti normativi; utile per atti recenti e verifica delle date di pubblicazione/entrata in vigore.
 resource: https://www.gazzettaufficiale.it/
 tags: [gazzetta-ufficiale, pubblicazione]
-timestamp: 2026-06-25T00:00:00Z
+timestamp: 2026-06-26T00:00:00Z
 ---
 
 # Gazzetta Ufficiale
@@ -19,4 +19,5 @@ Gli atti sono consultabili in **HTML** e **PDF**; la Gazzetta espone gli atti tr
 
 ## Riuso
 
-I testi degli atti ufficiali sono atti pubblici esclusi dalla protezione del diritto d'autore; le condizioni puntuali di riuso del portale vanno verificate in fase di ingest (vedi [licenze](/requisiti/licenze.md)).
+I **testi** degli atti ufficiali sono esclusi dalla protezione del diritto d'autore (art. 5 della L. 633/1941), ma il **portale** dell'Istituto Poligrafico e Zecca dello Stato **non espone una licenza aperta esplicita**: la riproduzione è consentita a condizione di citare la fonte e indicarne il carattere non autentico.
+Per questo, in Magistra la Gazzetta Ufficiale è usata soprattutto per **date e metadati di pubblicazione**, mentre il **testo coordinato** si acquisisce da [Normattiva](/fonti/normattiva.md) (CC BY 4.0). Quadro completo in [licenze](/requisiti/licenze.md).
