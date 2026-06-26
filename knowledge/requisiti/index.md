@@ -9,23 +9,23 @@ timestamp: 2026-06-20T00:00:00Z
 # Requisiti e qualità
 
 Questa cartella raccoglie i vincoli e gli obiettivi trasversali che il prodotto deve rispettare.
-Insieme alle [funzionalità](/funzionalita/index.md) è la base del documento di specifiche.
+Insieme alle [funzionalità](../funzionalita/index.md) è la base del documento di specifiche.
 
 ## Ambito e pianificazione
 
-- [Ambito MVP](/requisiti/mvp.md) — cosa entra nella prima release e cosa no.
-- [Roadmap](/requisiti/roadmap.md) — le fasi successive all'MVP.
+- [Ambito MVP](./mvp.md) — cosa entra nella prima release e cosa no.
+- [Roadmap](./roadmap.md) — le fasi successive all'MVP.
 
 ## Qualità e vincoli
 
-- [Requisiti non funzionali](/requisiti/requisiti-non-funzionali.md) — prestazioni, scalabilità, affidabilità, usabilità.
-- [Privacy e dati personali](/requisiti/privacy-e-dati-personali.md) — privacy by design e GDPR.
-- [Sicurezza](/requisiti/sicurezza.md) — cifratura, gestione dei segreti, controllo accessi.
-- [Licenze](/requisiti/licenze.md) — licenza del software e condizioni di riuso dei dati.
-- [Valutazione della qualità](/requisiti/valutazione-qualita.md) — come misuriamo l'affidabilità delle risposte.
+- [Requisiti non funzionali](./requisiti-non-funzionali.md) — prestazioni, scalabilità, affidabilità, usabilità.
+- [Privacy e dati personali](./privacy-e-dati-personali.md) — privacy by design e GDPR.
+- [Sicurezza](./sicurezza.md) — cifratura, gestione dei segreti, controllo accessi.
+- [Licenze](./licenze.md) — licenza del software e condizioni di riuso dei dati.
+- [Valutazione della qualità](./valutazione-qualita.md) — come misuriamo l'affidabilità delle risposte.
 
 ## Principi
 
 - **Citazioni verificabili** come requisito di prodotto, non solo come funzionalità.
-- **Riservatezza come leva primaria**: per gli studi legali la confidenzialità dei dati dei clienti conta più del costo; l'app gira interamente in locale e i dati restano sulla macchina dell'utente (vedi [privacy](/requisiti/privacy-e-dati-personali.md)).
+- **Riservatezza come leva primaria**: per gli studi legali la confidenzialità dei dati dei clienti conta più del costo; l'app gira interamente in locale e i dati restano sulla macchina dell'utente (vedi [privacy](./privacy-e-dati-personali.md)).
 - **Misurabilità**: la qualità delle risposte si valuta con metriche, non a sensazione.

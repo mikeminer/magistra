@@ -10,4 +10,4 @@ timestamp: 2026-06-25T00:00:00Z
 
 Trasformazione di dati in una forma illeggibile senza la chiave corrispondente, per proteggerne la riservatezza.
 
-Nella piattaforma è usata per le [chiavi API](/modello-dati/chiave-api.md) locali (cifrate a riposo, mai in chiaro nel database o nei log) e per i [documenti](/modello-dati/documento.md) nell'[archiviazione locale](/architettura/archiviazione-documenti.md); l'unico traffico in transito da proteggere su TLS è quello opzionale verso i provider LLM remoti. È un requisito di [sicurezza](/requisiti/sicurezza.md) e [privacy](/requisiti/privacy-e-dati-personali.md).
+Nella piattaforma è usata per le [chiavi API](../modello-dati/chiave-api.md) locali (cifrate a riposo, mai in chiaro nel database o nei log) e per i [documenti](../modello-dati/documento.md) nell'[archiviazione locale](../architettura/archiviazione-documenti.md); l'unico traffico in transito da proteggere su TLS è quello opzionale verso i provider LLM remoti. È un requisito di [sicurezza](../requisiti/sicurezza.md) e [privacy](../requisiti/privacy-e-dati-personali.md).

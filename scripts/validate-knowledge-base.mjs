@@ -254,19 +254,26 @@ function validateFile(file, knownFiles) {
   else if (h1s.length > 1) err(file, `Sono presenti ${h1s.length} titoli "# " (atteso 1), alle righe ${h1s.join(', ')}.`);
 
   // 10. Link interni
+  const srcDir = path.posix.dirname(bp); // cartella del file, percorso bundle POSIX
   for (const target of extractLinks(content)) {
     if (/(^|\/)docs\//.test(target)) {
-      err(file, `Link alla vecchia cartella docs/: "${target}". Usa la knowledge base in /…`);
+      err(file, `Link alla vecchia cartella docs/: "${target}". Usa la knowledge base con percorsi relativi.`);
       continue;
     }
     const clean = target.split('#')[0];
     if (clean === '' || /^[a-z]+:/i.test(clean) || clean.startsWith('//')) continue; // ancore / URL esterne
     if (!clean.endsWith('.md')) continue; // link non al bundle
-    if (!clean.startsWith('/')) {
-      err(file, `Link interno non root-relative: "${target}". Usa percorsi tipo /cartella/file.md.`);
+    if (clean.startsWith('/')) {
+      err(file, `Link interno assoluto: "${target}". Usa un percorso relativo al file (es. ../cartella/file.md), così funziona sia su GitHub sia in Obsidian.`);
       continue;
     }
-    if (!knownFiles.has(clean)) {
+    if (!clean.startsWith('./') && !clean.startsWith('../')) {
+      err(file, `Link interno non relativo: "${target}". Anteponi ./ o ../ (es. ./file.md, ../cartella/file.md).`);
+      continue;
+    }
+    // Risolve il percorso relativo rispetto alla cartella del file → percorso bundle.
+    const resolved = path.posix.normalize(path.posix.join(srcDir, clean));
+    if (!knownFiles.has(resolved)) {
       err(file, `Link interno non risolto: "${target}" non corrisponde a nessun file del bundle.`);
     }
   }
@@ -293,12 +300,22 @@ function main() {
     }
   }
 
-  // b. Validazione per-file + raccolta del contenuto degli index
-  const indexContent = new Map(); // dir assoluta -> testo dell'index.md
+  // b. Validazione per-file + raccolta dei target linkati da ogni index.
+  //    Gli index usano link relativi (es. ./file.md, ../cartella/file.md): li
+  //    risolviamo a percorsi bundle (/cartella/file.md) per il controllo di copertura.
+  const indexTargets = new Map(); // dir assoluta dell'index -> Set di percorsi bundle linkati
   for (const file of files) {
     validateFile(file, knownFiles);
     if (path.basename(file) === 'index.md') {
-      indexContent.set(path.dirname(file), fs.readFileSync(file, 'utf8'));
+      const content = fs.readFileSync(file, 'utf8').replace(/^﻿/, '');
+      const srcDir = path.posix.dirname(bundlePath(file));
+      const targets = new Set();
+      for (const target of extractLinks(content)) {
+        const clean = target.split('#')[0];
+        if (!clean.endsWith('.md') || /^[a-z]+:/i.test(clean) || clean.startsWith('/')) continue;
+        targets.add(path.posix.normalize(path.posix.join(srcDir, clean)));
+      }
+      indexTargets.set(path.dirname(file), targets);
     }
   }
 
@@ -313,11 +330,11 @@ function main() {
     const referencingDir = isIndex
       ? path.dirname(path.dirname(file)) // index di sottocartella → cartella padre
       : path.dirname(file); // concetto → propria cartella
-    const idx = indexContent.get(referencingDir);
-    if (idx === undefined) continue; // già segnalato come index mancante
-    if (!idx.includes(bp)) {
+    const targets = indexTargets.get(referencingDir);
+    if (targets === undefined) continue; // già segnalato come index mancante
+    if (!targets.has(bp)) {
       const where = (path.relative(bundleRoot, referencingDir).split(path.sep).join('/') || '') + '/index.md';
-      err(file, `Non è referenziato in "/${where}" (atteso un link a "${bp}").`);
+      err(file, `Non è referenziato in "/${where}" (atteso un link relativo che punti a "${bp}").`);
     }
   }
 

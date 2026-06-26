@@ -3,7 +3,7 @@
 // Magistra.
 //
 // - Include TUTTI i file .md del bundle `knowledge/`.
-// - I link interni `/cartella/file.md` diventano salti interni al PDF
+// - I link interni relativi (./file.md, ../cartella/file.md) diventano salti interni al PDF
 //   (named destinations); le URL esterne restano cliccabili.
 // - I file sono ordinati seguendo gli `index.md` (stesso ordine di lettura).
 //
@@ -162,16 +162,27 @@ function splitFrontmatter(content) {
   return { data, body: lines.slice(bodyStart).join('\n') };
 }
 
-// Estrae i target dei link Markdown interni (in ordine di apparizione).
-function internalLinksInOrder(body, known) {
+// Risolve un target di link (relativo al file sorgente) a un percorso bundle
+// (/cartella/file.md). Ritorna null se non è un link interno al bundle.
+function resolveInternal(href, srcBp, known) {
+  const p = href.split('#')[0];
+  if (!p.endsWith('.md') || /^[a-z]+:/i.test(p) || p.startsWith('//')) return null;
+  const srcDir = path.posix.dirname(srcBp);
+  const resolved = p.startsWith('/')
+    ? path.posix.normalize(p) // compatibilità con eventuali vecchi link assoluti
+    : path.posix.normalize(path.posix.join(srcDir, p));
+  return known.has(resolved) ? resolved : null;
+}
+
+// Estrae i target dei link Markdown interni (in ordine di apparizione),
+// risolti a percorsi bundle rispetto al file sorgente `srcBp`.
+function internalLinksInOrder(body, srcBp, known) {
   const re = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
   const out = [];
   let m;
   while ((m = re.exec(body)) !== null) {
-    const p = m[1].split('#')[0];
-    if (p.startsWith('/') && p.endsWith('.md') && known.has(p) && !out.includes(p)) {
-      out.push(p);
-    }
+    const resolved = resolveInternal(m[1], srcBp, known);
+    if (resolved && !out.includes(resolved)) out.push(resolved);
   }
   return out;
 }
@@ -195,12 +206,12 @@ function loadBundle() {
   add('/index.md');
   const rootDoc = byPath.get('/index.md');
   const folderIndexes = rootDoc
-    ? internalLinksInOrder(rootDoc.body, known).filter((p) => p.endsWith('/index.md'))
+    ? internalLinksInOrder(rootDoc.body, rootDoc.bp, known).filter((p) => p.endsWith('/index.md'))
     : [];
   for (const fi of folderIndexes) {
     add(fi);
     const folder = fi.replace(/index\.md$/, '');
-    for (const c of internalLinksInOrder(byPath.get(fi).body, known)) {
+    for (const c of internalLinksInOrder(byPath.get(fi).body, fi, known)) {
       if (c.startsWith(folder) && c !== fi) add(c);
     }
   }
@@ -219,30 +230,30 @@ function pickFont(style) {
   return FONT.body;
 }
 
-function resolveTarget(href, known) {
-  const [p] = href.split('#');
+function resolveTarget(href, srcBp, known) {
   if (/^(https?:|mailto:)/i.test(href)) return { link: href };
-  if (p.startsWith('/') && p.endsWith('.md') && known.has(p)) return { goTo: p };
+  const goTo = resolveInternal(href, srcBp, known);
+  if (goTo) return { goTo };
   if (/^[a-z]+:/i.test(href)) return { link: href };
   return {};
 }
 
-function buildRuns(tokens, known, style = {}, runs = []) {
+function buildRuns(tokens, known, srcBp, style = {}, runs = []) {
   for (const t of tokens) {
     switch (t.type) {
       case 'text':
       case 'escape':
-        if (t.tokens) buildRuns(t.tokens, known, style, runs);
+        if (t.tokens) buildRuns(t.tokens, known, srcBp, style, runs);
         else runs.push({ text: sanitize(t.text), style: { ...style } });
         break;
       case 'strong':
-        buildRuns(t.tokens, known, { ...style, bold: true }, runs);
+        buildRuns(t.tokens, known, srcBp, { ...style, bold: true }, runs);
         break;
       case 'em':
-        buildRuns(t.tokens, known, { ...style, italic: true }, runs);
+        buildRuns(t.tokens, known, srcBp, { ...style, italic: true }, runs);
         break;
       case 'del':
-        buildRuns(t.tokens, known, style, runs);
+        buildRuns(t.tokens, known, srcBp, style, runs);
         break;
       case 'codespan':
         runs.push({ text: sanitize(t.text), style: { ...style, code: true } });
@@ -251,12 +262,12 @@ function buildRuns(tokens, known, style = {}, runs = []) {
         runs.push({ text: '\n', style: { ...style } });
         break;
       case 'link': {
-        const target = resolveTarget(t.href, known);
-        buildRuns(t.tokens, known, { ...style, ...target, linkish: true }, runs);
+        const target = resolveTarget(t.href, srcBp, known);
+        buildRuns(t.tokens, known, srcBp, { ...style, ...target, linkish: true }, runs);
         break;
       }
       default:
-        if (t.tokens) buildRuns(t.tokens, known, style, runs);
+        if (t.tokens) buildRuns(t.tokens, known, srcBp, style, runs);
         else if (t.text != null) runs.push({ text: sanitize(t.text), style: { ...style } });
     }
   }
@@ -301,6 +312,10 @@ function build() {
   let contentW = doc.page.width - 60 - 60;
   const bottomY = () => doc.page.height - 64;
 
+  // Percorso bundle del documento in fase di rendering: serve a risolvere i
+  // link relativi (./file.md, ../cartella/file.md) nei salti interni al PDF.
+  let currentSrcBp = '/index.md';
+
   const ensure = (h) => { if (doc.y + h > bottomY()) doc.addPage(); };
 
   // Scrive una sequenza di run inline a partire da (x, y) entro `width`.
@@ -330,7 +345,7 @@ function build() {
   }
 
   function paragraph(tokens) {
-    const runs = buildRuns(tokens, known);
+    const runs = buildRuns(tokens, known, currentSrcBp);
     ensure(SIZE.body * LEADING);
     writeRuns(runs, left, doc.y, contentW);
     doc.moveDown(0.6);
@@ -341,7 +356,7 @@ function build() {
     ensure(size * 1.8 + 6);
     doc.moveDown(t.depth === 1 ? 0.2 : 0.5);
     if (dest) doc.addNamedDestination(dest);
-    const runs = buildRuns(t.tokens, known);
+    const runs = buildRuns(t.tokens, known, currentSrcBp);
     let first = true;
     runs.forEach((r, i) => {
       const last = i === runs.length - 1;
@@ -433,7 +448,7 @@ function build() {
       const y0 = doc.y;
       doc.font(FONT.body).fontSize(SIZE.body).fillColor(COLORS.muted);
       doc.text(marker, indent, y0, { width: 14, lineBreak: false });
-      writeRuns(buildRuns(inline, known), indent + 16, y0, contentW - (indent + 16 - left));
+      writeRuns(buildRuns(inline, known, currentSrcBp), indent + 16, y0, contentW - (indent + 16 - left));
       doc.moveDown(0.2);
       for (const sub of sublists) list(sub, depth + 1);
     }
@@ -493,7 +508,7 @@ function build() {
         const w = widths[ci];
         if (isHeader) doc.save().rect(x, y, w, h).fill(COLORS.tableHeadBg).restore();
         doc.save().strokeColor(COLORS.tableBorder).lineWidth(0.75).rect(x, y, w, h).stroke().restore();
-        const runs = buildRuns(c.tokens, known);
+        const runs = buildRuns(c.tokens, known, currentSrcBp);
         if (isHeader) runs.forEach((r) => (r.style.bold = true));
         writeRuns(runs, x + pad, y + pad, w - 2 * pad);
         x += w;

@@ -8,7 +8,7 @@ timestamp: 2026-06-18T00:00:00Z
 
 # Il modello FRBR di Akoma Ntoso
 
-[Akoma Ntoso](/glossario/akoma-ntoso.md) adotta il modello **[FRBR](/glossario/frbr.md)** per gestire le numerose derivazioni dei testi normativi (modifiche, versioni, lingue). Quattro livelli:
+[Akoma Ntoso](../glossario/akoma-ntoso.md) adotta il modello **[FRBR](../glossario/frbr.md)** per gestire le numerose derivazioni dei testi normativi (modifiche, versioni, lingue). Quattro livelli:
 
 | Livello | Significato | Esempio |
 |---|---|---|
@@ -19,4 +19,4 @@ timestamp: 2026-06-18T00:00:00Z
 
 Questi livelli sono dichiarati nel blocco `<meta>` → `<identification>` tramite `<FRBRWork>`, `<FRBRExpression>`, `<FRBRManifestation>`, `<FRBRItem>`.
 
-Questo modello è il motivo per cui Magistra può distinguere "il testo vigente oggi" da "il testo in vigore nel 2015". Le entità interne [Norma](/modello-dati/norma.md) e [Versione](/modello-dati/versione.md) mappano rispettivamente Work ed Expression.
+Questo modello è il motivo per cui Magistra può distinguere "il testo vigente oggi" da "il testo in vigore nel 2015". Le entità interne [Norma](./norma.md) e [Versione](./versione.md) mappano rispettivamente Work ed Expression.
