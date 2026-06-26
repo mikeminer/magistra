@@ -80,10 +80,10 @@ Se serve un nuovo `type`, proponilo in una issue prima di usarlo, così il vocab
 ## 5. Collegamenti tra concetti
 
 - Collega **liberamente** i concetti correlati: è il valore principale del formato.
-- Usa percorsi **relativi alla radice del bundle**, con `/` iniziale e l'estensione `.md`:
-  - ✅ `[Norma](/modello-dati/norma.md)`
-  - ✅ `[ELI](/glossario/eli.md)`
-  - ❌ `[Norma](norma.md)` · ❌ `[ELI](../glossario/eli.md)` · ❌ link senza `.md`
+- Usa percorsi **relativi al file**, con prefisso `./` o `../` e l'estensione `.md`. Così i link funzionano sia su GitHub (che li risolve rispetto al file) sia in Obsidian:
+  - ✅ stessa cartella: `[Vigenza](./vigenza.md)`
+  - ✅ altra cartella: `[ELI](../glossario/eli.md)` · `[Norma](../modello-dati/norma.md)`
+  - ❌ `[ELI](/glossario/eli.md)` (assoluto: rotto su GitHub) · ❌ `[Norma](norma.md)` (manca `./`) · ❌ link senza `.md`
 - Quando citi un termine definito nel glossario, **linkalo** alla sua voce.
 - I link a risorse esterne vanno nel corpo come link Markdown normali e, se sono la risorsa canonica del concetto, anche nel campo `resource`.
 

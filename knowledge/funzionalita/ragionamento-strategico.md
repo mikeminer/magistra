@@ -14,13 +14,13 @@ La capacità che distingue Magistra dagli altri strumenti: non si limita a **tro
 
 ## Cosa fa
 
-A partire dalla situazione concreta di un caso (la [fattispecie](/glossario/fattispecie.md) e i suoi dati: precedenti dell'assistito, fase processuale, pena in gioco), l'assistente:
+A partire dalla situazione concreta di un caso (la [fattispecie](../glossario/fattispecie.md) e i suoi dati: precedenti dell'assistito, fase processuale, pena in gioco), l'assistente:
 
-- **Incrocia** norme, [orientamenti di legittimità](/glossario/orientamento-giurisprudenziale.md) della [Cassazione](/fonti/giurisprudenza.md) e [calcolo di pene e termini](/funzionalita/calcolo-pena-termini.md).
+- **Incrocia** norme, [orientamenti di legittimità](../glossario/orientamento-giurisprudenziale.md) della [Cassazione](../fonti/giurisprudenza.md) e [calcolo di pene e termini](./calcolo-pena-termini.md).
 - Costruisce e confronta **scenari processuali** alternativi.
 - Restituisce **opzioni ragionate** con le loro **conseguenze**, personalizzate sul singolo caso.
 
-Ogni opzione è **ancorata** a [citazioni verificabili](/glossario/citazione-verificabile.md) (norme e pronunce) e ai calcoli che la sostengono: è il [RAG agentico](/glossario/rag-agentico.md) esteso al ragionamento multi-passo, non un'opinione generata a memoria.
+Ogni opzione è **ancorata** a [citazioni verificabili](../glossario/citazione-verificabile.md) (norme e pronunce) e ai calcoli che la sostengono: è il [RAG agentico](../glossario/rag-agentico.md) esteso al ragionamento multi-passo, non un'opinione generata a memoria.
 
 ## Esempi (penale)
 
@@ -31,10 +31,10 @@ Gli esempi sono penali — il ramo in cui questo ragionamento è più evidente �
 
 ## Perché serve la giurisprudenza di legittimità
 
-Gli [orientamenti della Cassazione](/glossario/orientamento-giurisprudenziale.md) cambiano spesso e sono il **presupposto** del ragionamento strategico: senza di essi l'assistente può calcolare termini e pene ma non valutare la **convenienza** di una scelta. Per questo la giurisprudenza di legittimità è una fondazione, non un'aggiunta successiva (vedi [Roadmap](/requisiti/roadmap.md)).
+Gli [orientamenti della Cassazione](../glossario/orientamento-giurisprudenziale.md) cambiano spesso e sono il **presupposto** del ragionamento strategico: senza di essi l'assistente può calcolare termini e pene ma non valutare la **convenienza** di una scelta. Per questo la giurisprudenza di legittimità è una fondazione, non un'aggiunta successiva (vedi [Roadmap](../requisiti/roadmap.md)).
 
 ## Confine: supporto alla decisione, non consulenza
 
 Lo strumento **affianca la decisione del professionista**, non la sostituisce: presenta opzioni, scenari e conseguenze con le relative fonti, ma la scelta resta dell'avvocato. Non fornisce consulenza legale e non garantisce esiti; la sua utilità sta nel rendere esplicite e tracciabili le alternative.
 
-Vedi [assistente legale](/funzionalita/assistente-legale.md), [ricerca per fattispecie](/funzionalita/ricerca-normativa.md), [calcolo di pene e termini](/funzionalita/calcolo-pena-termini.md) e [flusso RAG](/architettura/flusso-rag.md).
+Vedi [assistente legale](./assistente-legale.md), [ricerca per fattispecie](./ricerca-normativa.md), [calcolo di pene e termini](./calcolo-pena-termini.md) e [flusso RAG](../architettura/flusso-rag.md).

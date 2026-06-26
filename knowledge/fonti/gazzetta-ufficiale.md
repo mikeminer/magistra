@@ -15,9 +15,9 @@ Fonte ufficiale di pubblicazione degli atti normativi. Utile per atti recenti, a
 
 ## Formati e identificatori
 
-Gli atti sono consultabili in **HTML** e **PDF**; la Gazzetta espone gli atti tramite URI **[ELI](/glossario/eli.md)** (`gazzettaufficiale.it/eli/...`), coerenti con l'impianto di identificazione usato altrove nel progetto. Per il testo coordinato e multivigente la fonte canonica resta comunque [Normattiva](/fonti/normattiva.md).
+Gli atti sono consultabili in **HTML** e **PDF**; la Gazzetta espone gli atti tramite URI **[ELI](../glossario/eli.md)** (`gazzettaufficiale.it/eli/...`), coerenti con l'impianto di identificazione usato altrove nel progetto. Per il testo coordinato e multivigente la fonte canonica resta comunque [Normattiva](./normattiva.md).
 
 ## Riuso
 
 I **testi** degli atti ufficiali sono esclusi dalla protezione del diritto d'autore (art. 5 della L. 633/1941), ma la **veste tipografica** (l'edizione) è protetta dall'**Istituto Poligrafico e Zecca dello Stato** e il portale non espone una licenza aperta.
-Per questo in Magistra **non si effettua scraping diretto** della Gazzetta: il **testo coordinato** si acquisisce da [Normattiva](/fonti/normattiva.md) (CC BY 4.0), che risolve il problema alla radice, mentre la Gazzetta serve solo per **date e metadati di pubblicazione**. Quadro completo in [licenze](/requisiti/licenze.md).
+Per questo in Magistra **non si effettua scraping diretto** della Gazzetta: il **testo coordinato** si acquisisce da [Normattiva](./normattiva.md) (CC BY 4.0), che risolve il problema alla radice, mentre la Gazzetta serve solo per **date e metadati di pubblicazione**. Quadro completo in [licenze](../requisiti/licenze.md).

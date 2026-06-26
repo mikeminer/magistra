@@ -16,4 +16,4 @@ Le forme principali (art. 15 delle preleggi, disposizioni sulla legge in general
 - **tacita (implicita)**: per incompatibilità tra la nuova e la vecchia disciplina, o perché la nuova regola l'intera materia;
 - **referendaria**: per effetto di referendum abrogativo (art. 75 Cost.).
 
-È uno dei tipi di [Riferimento](/modello-dati/riferimento.md) tra norme e determina i passaggi di [vigenza](/glossario/vigenza.md) nella [multivigenza](/glossario/multivigenza.md).
+È uno dei tipi di [Riferimento](../modello-dati/riferimento.md) tra norme e determina i passaggi di [vigenza](./vigenza.md) nella [multivigenza](./multivigenza.md).

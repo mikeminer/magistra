@@ -8,7 +8,7 @@ timestamp: 2026-06-20T00:00:00Z
 
 # Revisione tabellare
 
-Modalità di analisi in blocco: a partire da un insieme di [documenti](/modello-dati/documento.md), l'utente definisce una serie di **domande/colonne** e ottiene una **tabella** con un documento per riga e una risposta per cella.
+Modalità di analisi in blocco: a partire da un insieme di [documenti](../modello-dati/documento.md), l'utente definisce una serie di **domande/colonne** e ottiene una **tabella** con un documento per riga e una risposta per cella.
 
 ## Esempio
 
@@ -20,10 +20,10 @@ Modalità di analisi in blocco: a partire da un insieme di [documenti](/modello-
 ## Cosa fa
 
 - Per ogni cella, l'assistente estrae l'informazione dal documento e, dove pertinente, riporta la fonte (clausola o riferimento normativo).
-- Le colonne possono essere salvate come **preset** in un [workflow](/funzionalita/workflow.md) e riutilizzate.
-- I risultati sono esportabili e possono alimentare una [conversazione](/modello-dati/conversazione.md) di approfondimento.
+- Le colonne possono essere salvate come **preset** in un [workflow](./workflow.md) e riutilizzate.
+- I risultati sono esportabili e possono alimentare una [conversazione](../modello-dati/conversazione.md) di approfondimento.
 
 ## Relazioni
 
-Caso particolare delle [operazioni multi-documento](/funzionalita/operazioni-multi-documento.md), orientato all'**estrazione comparabile** di dati.
-Si appoggia all'[assistente legale](/funzionalita/assistente-legale.md) e alla [conversione documenti](/architettura/conversione-documenti.md).
+Caso particolare delle [operazioni multi-documento](./operazioni-multi-documento.md), orientato all'**estrazione comparabile** di dati.
+Si appoggia all'[assistente legale](./assistente-legale.md) e alla [conversione documenti](../architettura/conversione-documenti.md).

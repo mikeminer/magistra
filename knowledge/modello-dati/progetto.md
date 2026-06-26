@@ -8,7 +8,7 @@ timestamp: 2026-06-20T00:00:00Z
 
 # Progetto
 
-Raggruppa il lavoro attorno a una pratica o a un cliente. È il dato dietro la funzionalità [Progetti](/funzionalita/progetti.md).
+Raggruppa il lavoro attorno a una pratica o a un cliente. È il dato dietro la funzionalità [Progetti](../funzionalita/progetti.md).
 
 | Campo | Descrizione |
 |---|---|
@@ -18,8 +18,8 @@ Raggruppa il lavoro attorno a una pratica o a un cliente. È il dato dietro la f
 
 ## Relazioni
 
-- Contiene [Documenti](/modello-dati/documento.md) e [Conversazioni](/modello-dati/conversazione.md).
+- Contiene [Documenti](./documento.md) e [Conversazioni](./conversazione.md).
 
 > Single-utente: il progetto non ha proprietario né membri e non è condiviso; non esiste multi-utenza.
 
-Parte del [modello dati applicativo](/modello-dati/modello-applicativo.md).
+Parte del [modello dati applicativo](./modello-applicativo.md).
