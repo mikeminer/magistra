@@ -107,7 +107,9 @@ Se vuoi contribuire o entrare in contatto con la community, parti da qui.
 
 ## Licenza
 
-Da definire. Si propone **AGPL-3.0** per garantire che le derivazioni restino aperte.
+Il software è rilasciato sotto **[AGPL-3.0-or-later](LICENSE)**, per garantire che le derivazioni — incluse quelle erogate come servizio — restino aperte. Il testo integrale è nel file [`LICENSE`](LICENSE).
+
+Le condizioni di riuso dei **dati** delle fonti sono trattate a parte (vedi [`knowledge/requisiti/licenze.md`](knowledge/requisiti/licenze.md)).
 
 ---
 

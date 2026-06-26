@@ -1,9 +1,9 @@
 ---
 type: Concetto
 title: Licenze
-description: Licenza proposta per il software (AGPL-3.0-or-later) e condizioni di riuso dei dati delle fonti normative e giurisprudenziali.
+description: Licenza del software (AGPL-3.0-or-later, confermata) e condizioni di riuso dei dati delle fonti normative e giurisprudenziali.
 tags: [licenze, agpl, riuso-dati]
-timestamp: 2026-06-25T00:00:00Z
+timestamp: 2026-06-26T00:00:00Z
 ---
 
 # Licenze
@@ -12,8 +12,9 @@ Due piani distinti: la licenza del **software** e le condizioni di riuso dei **d
 
 ## Software
 
-- Proposta: **AGPL-3.0-or-later**, per garantire che le derivazioni — incluse quelle erogate come servizio — restino aperte.
+- **Confermata: AGPL-3.0-or-later**, per garantire che le derivazioni — incluse quelle erogate come servizio — restino aperte.
 - È la licenza già dichiarata nel `package.json` del repository (`AGPL-3.0-or-later`).
+- Il testo integrale è nel file `LICENSE` alla radice del repository (GNU Affero General Public License v3).
 
 ## Dati delle fonti
 
