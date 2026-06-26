@@ -19,5 +19,5 @@ Gli atti sono consultabili in **HTML** e **PDF**; la Gazzetta espone gli atti tr
 
 ## Riuso
 
-I **testi** degli atti ufficiali sono esclusi dalla protezione del diritto d'autore (art. 5 della L. 633/1941), ma il **portale** dell'Istituto Poligrafico e Zecca dello Stato **non espone una licenza aperta esplicita**: la riproduzione è consentita a condizione di citare la fonte e indicarne il carattere non autentico.
-Per questo, in Magistra la Gazzetta Ufficiale è usata soprattutto per **date e metadati di pubblicazione**, mentre il **testo coordinato** si acquisisce da [Normattiva](/fonti/normattiva.md) (CC BY 4.0). Quadro completo in [licenze](/requisiti/licenze.md).
+I **testi** degli atti ufficiali sono esclusi dalla protezione del diritto d'autore (art. 5 della L. 633/1941), ma la **veste tipografica** (l'edizione) è protetta dall'**Istituto Poligrafico e Zecca dello Stato** e il portale non espone una licenza aperta.
+Per questo in Magistra **non si effettua scraping diretto** della Gazzetta: il **testo coordinato** si acquisisce da [Normattiva](/fonti/normattiva.md) (CC BY 4.0), che risolve il problema alla radice, mentre la Gazzetta serve solo per **date e metadati di pubblicazione**. Quadro completo in [licenze](/requisiti/licenze.md).

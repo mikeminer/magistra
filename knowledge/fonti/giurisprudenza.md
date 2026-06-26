@@ -12,11 +12,11 @@ timestamp: 2026-06-26T00:00:00Z
 Sentenze e orientamenti, dove disponibili in formato aperto:
 
 - **Corte Costituzionale** — portale istituzionale (<https://www.cortecostituzionale.it/>) e dati aperti con endpoint SPARQL su <https://dati.cortecostituzionale.it/>. Pronunce (~20.000 dal 1956) e massime sono rilasciate con licenza **CC BY-SA 3.0**. È, in questa fase, l'unica fonte giurisprudenziale **apertamente licenziata** integrata nella piattaforma.
-- **Corte di Cassazione** — giurisprudenza di **legittimità**; il CED rende pubblica la giurisprudenza recente tramite il servizio SentenzeWeb/ItalGiure (<https://www.italgiure.giustizia.it/>), con accesso e riuso variabili. Il **testo** delle sentenze è libero (art. 5 della L. 633/1941), ma la banca dati non espone una licenza aperta e l'accesso è limitato: la mappatura è demandata all'approfondimento dedicato ([#24](https://github.com/Italian-Builders-Org/magistra/issues/24)).
+- **Corte di Cassazione** — giurisprudenza di **legittimità**; il CED rende pubblica la giurisprudenza recente tramite il servizio SentenzeWeb/ItalGiure (<https://www.italgiure.giustizia.it/>). Il **testo** delle sentenze è libero (art. 5 della L. 633/1941). Per l'**MVP** si parte dalla giurisprudenza disponibile in **formato aperto** sui portali della giustizia (giustizia.it, SentenzeWeb); i servizi **commerciali** (CED, DeJure) hanno condizioni restrittive e si valutano in fase **post-MVP** (es. abbonamento API), quando il modello di business lo sostiene. Il nodo delle licenze commerciali **non blocca l'MVP**. Mappatura puntuale del disponibile in aperto: [#24](https://github.com/Italian-Builders-Org/magistra/issues/24).
 
 ## Riuso
 
-Le condizioni per fonte sono riepilogate in [licenze](/requisiti/licenze.md). In sintesi: i contenuti della Corte Costituzionale sono **CC BY-SA 3.0** (attribuzione + *share-alike* sui dati ridistribuiti); per la Cassazione il riuso del database resta da definire.
+Le condizioni per fonte sono riepilogate in [licenze](/requisiti/licenze.md). In sintesi: i contenuti della Corte Costituzionale sono **CC BY-SA 3.0** (attribuzione + *share-alike* sui dati ridistribuiti); per la Cassazione l'MVP usa le fonti aperte e l'integrazione commerciale è rimandata al post-MVP.
 
 ## Perché è una fondazione, non un'aggiunta
 
