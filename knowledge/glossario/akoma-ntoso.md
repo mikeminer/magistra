@@ -9,4 +9,4 @@ timestamp: 2026-06-18T00:00:00Z
 
 # Akoma Ntoso (AKN / LegalDOCML)
 
-Standard XML internazionale (OASIS) per rappresentare documenti giuridici in modo strutturato, con metadati. Vedi la [struttura del documento AKN](/modello-dati/struttura-akn.md) e il [modello FRBR](/modello-dati/frbr.md).
+Standard XML internazionale (OASIS) per rappresentare documenti giuridici in modo strutturato, con metadati. Vedi la [struttura del documento AKN](../modello-dati/struttura-akn.md) e il [modello FRBR](../modello-dati/frbr.md).

@@ -8,9 +8,9 @@ timestamp: 2026-06-20T00:00:00Z
 
 # Modello dati applicativo
 
-Oltre al **corpus normativo** ([Norma](/modello-dati/norma.md), [Versione](/modello-dati/versione.md), [Unità](/modello-dati/unita.md), [Chunk](/modello-dati/chunk.md)), la piattaforma gestisce i **dati dell'applicazione**: il lavoro dell'utente sui documenti.
+Oltre al **corpus normativo** ([Norma](./norma.md), [Versione](./versione.md), [Unità](./unita.md), [Chunk](./chunk.md)), la piattaforma gestisce i **dati dell'applicazione**: il lavoro dell'utente sui documenti.
 
-Queste entità vivono nel [database applicativo](/architettura/database-applicativo.md) e sono nettamente separate dal corpus pubblico.
+Queste entità vivono nel [database applicativo](../architettura/database-applicativo.md) e sono nettamente separate dal corpus pubblico.
 Trattandosi di una versione **single-utente**, non esiste un'entità "utente" né alcun modello di account o condivisione.
 
 ```mermaid
@@ -30,10 +30,10 @@ flowchart TD
 
 ## Entità
 
-- [Progetto](/modello-dati/progetto.md)
-- [Documento](/modello-dati/documento.md)
-- [Conversazione](/modello-dati/conversazione.md)
-- [Messaggio](/modello-dati/messaggio.md)
-- [Chiave API](/modello-dati/chiave-api.md)
+- [Progetto](./progetto.md)
+- [Documento](./documento.md)
+- [Conversazione](./conversazione.md)
+- [Messaggio](./messaggio.md)
+- [Chiave API](./chiave-api.md)
 
 > Bozza concettuale: lo schema serve a ragionare sui dati del prodotto, non è ancora un'implementazione.

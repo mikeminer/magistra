@@ -27,4 +27,4 @@ Un atto (`<act>`) si articola tipicamente in:
     <conclusions> … formule finali …
 ```
 
-L'**articolo** (`<article>`) è l'unità fondamentale; il **[comma](/glossario/comma.md)** (`<paragraph>`) è la sotto-unità più rilevante per le citazioni puntuali. Queste unità sono modellate dall'entità [Unità](/modello-dati/unita.md).
+L'**articolo** (`<article>`) è l'unità fondamentale; il **[comma](../glossario/comma.md)** (`<paragraph>`) è la sotto-unità più rilevante per le citazioni puntuali. Queste unità sono modellate dall'entità [Unità](./unita.md).

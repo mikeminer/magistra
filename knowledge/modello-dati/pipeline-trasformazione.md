@@ -3,7 +3,7 @@ type: Processo
 title: Pipeline di trasformazione
 description: Dal download AKN di Normattiva fino all'indice vettoriale e al grafo dei riferimenti, preservando i metadati di citazione.
 tags: [pipeline, ingest, chunking, embedding]
-timestamp: 2026-06-18T00:00:00Z
+timestamp: 2026-06-25T00:00:00Z
 ---
 
 # Pipeline di trasformazione
@@ -24,10 +24,16 @@ flowchart TD
     T --> C
     C --> E
     E --> IV
-    E --> R
+    T --> R
     R --> G
 ```
 
-**Principio chiave**: ogni [Chunk](/modello-dati/chunk.md) porta con sé i metadati necessari a costruire una **[citazione verificabile](/glossario/citazione-verificabile.md)** ([ELI](/glossario/eli.md) + articolo + comma + data di vigenza). Senza questi metadati il chunk non entra nell'indice.
+**Principio chiave**: ogni [Chunk](./chunk.md) porta con sé i metadati necessari a costruire una **[citazione verificabile](../glossario/citazione-verificabile.md)** ([ELI](../glossario/eli.md) + articolo + comma + data di vigenza). Senza questi metadati il chunk non entra nell'indice.
 
-Le fasi attingono dalla fonte [Normattiva](/fonti/normattiva.md) e alimentano l'[indice normativo](/architettura/indice-normativo.md).
+Le fasi attingono dalla fonte [Normattiva](../fonti/normattiva.md) e alimentano l'[indice normativo](../architettura/indice-normativo.md).
+
+## Dove gira
+
+La pipeline è un lavoro **batch**, CPU-bound e correctness-critical: gira sul [worker / runtime dei job](../architettura/worker-ingest.md), in **processo separato** dall'API, così da non degradare l'assistente in tempo reale.
+
+Non viene eseguita sul dispositivo di ogni utente finale: è il team a svolgerla in un **ambiente controllato** e a distribuire un [indice già pronto](../architettura/deployment.md), con possibilità di aggiornamento. La logica resta nel repository, quindi l'utente "pro" può rieseguirla da sé.

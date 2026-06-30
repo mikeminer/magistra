@@ -14,6 +14,6 @@ Collegamento tra norme o unità, base del grafo delle norme.
 |---|---|
 | `da_eli` | norma/unità citante |
 | `a_eli` | norma/unità citata |
-| `tipo` | rinvio, modifica, [abrogazione](/glossario/abrogazione.md), [recepimento](/glossario/recepimento.md) UE |
+| `tipo` | rinvio, modifica, [abrogazione](../glossario/abrogazione.md), [recepimento](../glossario/recepimento.md) UE |
 
-I Riferimenti sono estratti nell'ultima fase della [pipeline di trasformazione](/modello-dati/pipeline-trasformazione.md).
+I Riferimenti sono estratti nell'ultima fase della [pipeline di trasformazione](./pipeline-trasformazione.md).

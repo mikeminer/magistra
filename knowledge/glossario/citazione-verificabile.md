@@ -8,4 +8,4 @@ timestamp: 2026-06-18T00:00:00Z
 
 # Citazione verificabile
 
-Riferimento di una risposta a una fonte ufficiale identificabile ([ELI](/glossario/eli.md) + articolo + [comma](/glossario/comma.md) + data di [vigenza](/glossario/vigenza.md)). È il principio cardine del [flusso RAG](/architettura/flusso-rag.md): nessuna risposta normativa senza fonte.
+Riferimento di una risposta a una fonte ufficiale identificabile ([ELI](./eli.md) + articolo + [comma](./comma.md) + data di [vigenza](./vigenza.md)). È il principio cardine del [flusso RAG](../architettura/flusso-rag.md): nessuna risposta normativa senza fonte.
