@@ -3,7 +3,7 @@ type: Indice
 title: Architettura
 description: Componenti del sistema e flusso RAG. Bozza per orientare le scelte; non è ancora un'implementazione.
 tags: [architettura, rag, locale]
-timestamp: 2026-06-18T00:00:00Z
+timestamp: 2026-06-30T00:00:00Z
 ---
 
 # Architettura
@@ -15,15 +15,17 @@ Bozza di architettura per Magistra. In questa fase serve a orientare le scelte; 
 ```mermaid
 flowchart TD
     Utente(["Utente"])
-    FE["Frontend (Next.js)"]
+    FE["Frontend (React + Vite)"]
     BE["Backend / API (Node)<br/>orchestrazione RAG"]
-    VDB[("Database + indice<br/>PGlite + pgvector<br/>(embedded)")]
+    DB[("Database applicativo<br/>PGlite (embedded)")]
+    VDB[("Indice del corpus<br/>LanceDB (embedded)")]
     OS[("Documenti utente<br/>filesystem locale")]
     IDX["Indice normativo<br/>chunk + metadati ELI"]
     LLM["LLM<br/>provider configurabile"]
 
     Utente --> FE
-    FE -->|API| BE
+    FE -->|IPC| BE
+    BE --> DB
     BE --> VDB
     BE --> OS
     VDB --> IDX
@@ -31,14 +33,14 @@ flowchart TD
     LLM -->|risposte con citazioni| FE
 ```
 
-Magistra è un'**app desktop** che gira interamente in locale: tutti i componenti sono impacchettati nel bundle dell'app, con database e indice **embedded** (PGlite) e i documenti dell'utente sul **filesystem locale**. Vedi [deployment](./deployment.md).
+Magistra è un'**app desktop** che gira interamente in locale: tutti i componenti sono impacchettati nel bundle dell'app, con il database applicativo **embedded** (PGlite), l'indice del corpus **embedded** (LanceDB) e i documenti dell'utente sul **filesystem locale**. Vedi [deployment](./deployment.md).
 
 L'ingest pesante del corpus non gira insieme all'assistente: è un job **batch separato** (vedi [worker / runtime dei job](./worker-ingest.md)), così la chat resta reattiva.
 
 ## Concetti
 
 - [Stack tecnologico (TypeScript-first)](./stack-tecnologico.md)
-- [Frontend (Next.js)](./frontend.md)
+- [Frontend (React + Vite)](./frontend.md)
 - [Backend / API (Node)](./backend-api.md)
 - [Worker / runtime dei job](./worker-ingest.md)
 - [Indice normativo + Vector DB](./indice-normativo.md)
@@ -51,6 +53,7 @@ L'ingest pesante del corpus non gira insieme all'assistente: è un job **batch s
 - [Pianificazione delle query](./pianificazione-query.md)
 - [Flusso di una domanda (RAG agentico)](./flusso-rag.md)
 - [Deployment](./deployment.md)
+- [Packaging e distribuzione desktop](./packaging-distribuzione.md)
 
 ## Principi architetturali
 
@@ -61,4 +64,4 @@ L'ingest pesante del corpus non gira insieme all'assistente: è un job **batch s
 - **Single-utente**: pensata per una sola persona sul proprio computer; non gestisce account, login né multi-utenza.
 - **Separazione dati/modello**: la qualità dipende dai dati e dal retrieval, non solo dall'LLM.
 - **Dati sotto il controllo dell'utente**: tutto gira e resta in locale sulla macchina dell'utente.
-- **Modularità**: provider LLM intercambiabile.
+- **Confini dietro interfacce**: dati, indice, storage, provider LLM e trasporto UI ↔ backend sono raggiunti dietro interfacce tipizzate, così le implementazioni concrete (PGlite, LanceDB, filesystem, IPC) restano isolate e sostituibili (vedi [stack tecnologico](./stack-tecnologico.md)).

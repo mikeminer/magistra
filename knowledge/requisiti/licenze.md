@@ -3,7 +3,7 @@ type: Concetto
 title: Licenze
 description: Licenza del software (AGPL-3.0-or-later, confermata) e condizioni di riuso dei dati delle fonti normative e giurisprudenziali.
 tags: [licenze, agpl, riuso-dati]
-timestamp: 2026-06-26T00:00:00Z
+timestamp: 2026-06-30T00:00:00Z
 ---
 
 # Licenze
@@ -29,7 +29,7 @@ Il **contenuto** di leggi, decreti e sentenze è quindi liberamente riutilizzabi
 | [EUR-Lex](../fonti/eur-lex.md) | Riuso libero (**Dec. 2011/833/UE**); contenuti editoriali e testi consolidati **CC BY 4.0**; metadati **CC0 1.0** | Attribuzione; indicare le modifiche | Esclusi loghi/marchi UE e opere di terzi |
 | [Corte Costituzionale](../fonti/giurisprudenza.md) | **CC BY-SA 3.0** (pronunce e massime, endpoint SPARQL) | Attribuzione **+ condivisione allo stesso modo** (*share-alike*) sui dati | Unica fonte giurisprudenziale apertamente licenziata integrata in questa fase |
 | [Gazzetta Ufficiale](../fonti/gazzetta-ufficiale.md) | **Veste tipografica protetta** dall'IPZS; nessuna licenza aperta | Attribuzione; carattere non autentico | **No scraping diretto**: il testo si prende da Normattiva; la GU serve solo per **date e metadati** |
-| Corte di Cassazione | Testo libero (art. 5); **portali aperti** per l'MVP, servizi commerciali (CED/DeJure) restrittivi | Attribuzione | **MVP**: fonti aperte (giustizia.it/SentenzeWeb); integrazione commerciale **post-MVP** — vedi [#24](https://github.com/Italian-Builders-Org/magistra/issues/24) |
+| Corte di Cassazione | Testo libero (art. 5); **portali aperti** per l'MVP, servizi commerciali (CED/DeJure) restrittivi | Attribuzione | **MVP**: fonti aperte (giustizia.it/SentenzeWeb); integrazione commerciale **post-MVP** |
 | [Giustizia amministrativa](../fonti/giurisprudenza.md) (Cons. Stato, TAR) | **CC BY 4.0** (Open GA Open Data) | Attribuzione | Provvedimenti del giudice amministrativo; **integrabile** |
 | [Merito](../fonti/giurisprudenza.md) — Banca Dati Pubblica (BDP) | Nessuna licenza aperta; **ToS restrittivi**; bulk solo editori (conv. AIE) | — | Civili dal 2016, accesso autenticato (SPID); **fuori MVP** per l'ingest |
 
@@ -37,7 +37,7 @@ Il **contenuto** di leggi, decreti e sentenze è quindi liberamente riutilizzabi
 
 - **Testo normativo**: la fonte canonica è sempre [Normattiva](../fonti/normattiva.md) (CC BY 4.0); della [Gazzetta Ufficiale](../fonti/gazzetta-ufficiale.md) **non si fa scraping diretto** (veste tipografica protetta), si usa solo per date e metadati di pubblicazione.
 - **Riuso commerciale**: per Normattiva (CC BY 4.0) ed EUR-Lex (Dec. 2011/833/UE) il riuso è consentito **anche a fini commerciali**, con il solo obbligo di **attribuzione**: il corpus normativo non pone vincoli al modello di business.
-- **Giurisprudenza**: ingest pieno della [Corte Costituzionale](../fonti/giurisprudenza.md) (CC BY-SA 3.0); la **giustizia amministrativa** è integrabile (Open GA, CC BY 4.0); la **Cassazione** nell'MVP serve per la verifica delle citazioni (testo libero, ma DB senza licenza/bulk), con banca dati CED commerciale **post-MVP**; il **merito** (BDP) resta **fuori MVP** (accesso autenticato, ToS restrittivi). Mappa completa in [giurisprudenza](../fonti/giurisprudenza.md), output di [#24](https://github.com/Italian-Builders-Org/magistra/issues/24).
+- **Giurisprudenza**: ingest pieno della [Corte Costituzionale](../fonti/giurisprudenza.md) (CC BY-SA 3.0); la **giustizia amministrativa** è integrabile (Open GA, CC BY 4.0); la **Cassazione** nell'MVP serve per la verifica delle citazioni (testo libero, ma DB senza licenza/bulk), con banca dati CED commerciale **post-MVP**; il **merito** (BDP) resta **fuori MVP** (accesso autenticato, ToS restrittivi). Mappa completa in [giurisprudenza](../fonti/giurisprudenza.md).
 - **Licenza dei dati distinta dal software**: ogni dato ridistribuito nel bundle mantiene la **propria** licenza. In particolare i contenuti della Corte Costituzionale restano **CC BY-SA 3.0** (attribuzione + share-alike); il software resta [AGPL-3.0-or-later](./licenze.md) (piano distinto).
 - **Compatibilità**: CC BY 4.0 e CC0 non pongono vincoli oltre l'attribuzione; **CC BY-SA 3.0** impone di ridistribuire i dati derivati con licenza compatibile e con attribuzione.
 

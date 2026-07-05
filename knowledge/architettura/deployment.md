@@ -3,21 +3,21 @@ type: Processo
 title: Deployment
 description: Magistra è distribuita come app desktop installabile che gira interamente in locale, senza Docker né competenze sistemistiche.
 tags: [deployment, desktop, locale]
-timestamp: 2026-06-25T00:00:00Z
+timestamp: 2026-06-30T00:00:00Z
 ---
 
 # Deployment
 
 Magistra è distribuita come **app desktop installabile**, non come stack di servizi. Il target è l'avvocato, che non deve installare Docker né gestire infrastruttura: scarica l'app e la usa.
 
-> Bozza concettuale: la scelta puntuale degli strumenti (framework desktop, packaging, script di setup) è demandata al documento di design.
+> L'approccio di distribuzione qui descritto è stabile: app desktop installabile, tutto in locale. I dettagli di packaging — framework desktop, modo di impacchettare il frontend, formati per OS, firma e auto-update — sono definiti in [packaging e distribuzione](./packaging-distribuzione.md).
 
 ## App desktop
 
 - È un **bundle che contiene tutto**: UI, logica di business e dati. Non un semplice client.
-- Il [database](./database-applicativo.md) e l'[indice normativo](./indice-normativo.md) sono un'istanza **embedded** (PGlite, Postgres in WASM con `pgvector`); i documenti dell'utente vanno sul **filesystem locale** (vedi [archiviazione locale](./archiviazione-documenti.md)).
+- Il [database applicativo](./database-applicativo.md) è un'istanza **embedded** PGlite (Postgres in WASM) e l'[indice normativo](./indice-normativo.md) usa **LanceDB** (motore vettoriale embedded nativo): entrambi nel bundle. I documenti dell'utente vanno sul **filesystem locale** (vedi [archiviazione locale](./archiviazione-documenti.md)).
 - I dati restano sulla macchina dell'utente, senza il costo tecnico di gestire server o servizi.
-- Strumento candidato per il packaging: **Electron**, coerente con lo [stack TypeScript-first](./stack-tecnologico.md) (l'intero bundle resta in TS).
+- L'app desktop è basata su **Electron**, coerente con lo [stack TypeScript-first](./stack-tecnologico.md) (l'intero bundle resta in TS).
 
 ## Indice già pronto
 
