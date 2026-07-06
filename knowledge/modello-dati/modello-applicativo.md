@@ -44,7 +44,7 @@ flowchart TD
 | Documento | `id` | `progetto_id` → Progetto.`id` | appartiene a 1 Progetto |
 | Conversazione | `id` | `progetto_id` → Progetto.`id` opzionale | appartiene a 0..1 Progetto |
 | Messaggio | `id` | `conversazione_id` → Conversazione.`id` | appartiene a 1 Conversazione |
-| Chiave API | `id` | nessuna FK utente | configurazione locale dell'istanza |
+| Chiave API | `id` | — | configurazione locale dell'istanza |
 
 Il modello resta single-utente: non esistono tabelle `utente`, `organizzazione`, membership o permessi.
 
